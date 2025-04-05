@@ -10,13 +10,17 @@
         body {
             font-family: 'Inter', sans-serif; /* Use Inter font */
         }
-        canvas {
+        canvas#sprite-canvas { /* Target main canvas */
             border: 1px solid #d1d5db; /* gray-300 */
-            cursor: grab; /* Indicate draggable items */
+            cursor: default; /* Default cursor, change on hover/drag */
             touch-action: none; /* Prevent default touch actions like scrolling */
+            background-color: #f9fafb; /* Add a light background */
+        }
+        .frame-image:hover {
+             cursor: grab;
         }
         canvas:active {
-            cursor: grabbing; /* Indicate dragging */
+            /* cursor: grabbing; */ /* Set dynamically in JS */
         }
         .control-panel label {
             @apply block text-sm font-medium text-gray-700 mb-1;
@@ -27,21 +31,89 @@
         .control-panel button {
             @apply inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50;
         }
+         .control-panel button.secondary {
+             @apply bg-red-600 hover:bg-red-700 focus:ring-red-500;
+         }
+
         /* Style for the message box */
         #message-box {
             position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.75);
             color: white;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 8px; /* More rounded */
             display: none; /* Hidden by default */
-            z-index: 1000;
+            z-index: 1050; /* Ensure it's above modal overlay */
             max-width: 90%;
             text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Below message box, above content */
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem; /* More padding */
+            border-radius: 0.5rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 90vw; /* Limit width */
+            max-height: 90vh; /* Limit height */
+            overflow-y: auto; /* Allow scrolling if content overflows */
+            width: 500px; /* Default width */
+        }
+        .modal-content h2 {
+             @apply text-xl font-semibold text-gray-900 mb-4;
+        }
+         .modal-content label {
+            @apply block text-sm font-medium text-gray-700 mb-1;
+        }
+        .modal-content input[type="number"] {
+            @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 mb-3;
+        }
+         .modal-content button {
+            @apply inline-flex items-center justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-150 ease-in-out;
+         }
+         .modal-content button.primary {
+             @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500;
+         }
+         .modal-content button.secondary {
+             @apply bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500 ml-3;
+         }
+        /* Style for the preview canvas */
+        #sprite-sheet-preview-canvas {
+            max-width: 100%;
+            /* max-height: 300px; */ /* Height will be set dynamically based on aspect ratio */
+            border: 1px solid #d1d5db; /* gray-300 */
+            margin-bottom: 1rem;
+            display: block; /* Ensure it behaves like a block element */
+            margin-left: auto; /* Center preview */
+            margin-right: auto;
+            background-color: #f8f8f8; /* Light background for canvas */
+        }
+
+        /* Selection Highlight */
+        .selected-frame-highlight {
+            position: absolute; /* Position relative to canvas container */
+            border: 2px solid #4f46e5; /* Indigo-600 */
+            box-shadow: 0 0 0 2px white; /* Inner white glow for contrast */
+            pointer-events: none; /* Don't interfere with clicks */
+            z-index: 10; /* Above images */
+        }
+
     </style>
     <style>
       @font-face {
@@ -62,6 +134,8 @@
       }
       .lucide-upload::before { content: "\e90b"; } /* upload icon */
       .lucide-save::before { content: "\e8b4"; } /* save icon */
+      .lucide-file-image::before { content: "\e9f0"; } /* file-image icon */
+      .lucide-trash-2::before { content: "\e8ed"; } /* trash-2 icon */
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
@@ -86,511 +160,522 @@
                 <label for="frame-height">Frame Height (px):</label>
                 <input type="number" id="frame-height" value="64" min="1">
             </div>
-            <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                 <button id="import-button">
-                    <span class="lucide lucide-upload"></span>Import Images
+            <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                 <button id="import-frames-button">
+                    <span class="lucide lucide-upload"></span>Import Frames
                 </button>
+                 <button id="import-sheet-button">
+                    <span class="lucide lucide-file-image"></span>Import Sheet
+                </button>
+                 <button id="delete-frame-button" class="secondary" disabled>
+                     <span class="lucide lucide-trash-2"></span>Delete Frame
+                 </button>
                 <button id="save-button">
                      <span class="lucide lucide-save"></span>Save Sprite Sheet
                 </button>
             </div>
         </div>
 
-        <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+        <input type="file" id="frame-file-input" multiple accept="image/*" class="hidden">
+        <input type="file" id="sheet-file-input" accept="image/*" class="hidden">
 
-        <div class="w-full overflow-auto border border-gray-300 rounded-md bg-gray-50" style="max-height: 60vh;">
+        <div id="canvas-container" class="relative w-full overflow-auto border border-gray-300 rounded-md bg-gray-50" style="max-height: 60vh;">
              <canvas id="sprite-canvas" class="block rounded-md"></canvas>
-        </div>
+             </div>
 
         <div id="message-box"></div>
+
+        <div id="import-sheet-modal" class="modal-overlay hidden">
+             <div class="modal-content">
+                 <h2>Import Sprite Sheet</h2>
+                 <canvas id="sprite-sheet-preview-canvas"></canvas>
+                 <p class="text-sm text-gray-600 mb-4">Adjust the grid dimensions or frame size. The other values will update automatically.</p>
+                 <div class="grid grid-cols-2 gap-4">
+                     <div>
+                         <label for="import-sheet-cols">Grid Columns:</label>
+                         <input type="number" id="import-sheet-cols" value="4" min="1" step="1">
+                     </div>
+                     <div>
+                         <label for="import-sheet-rows">Grid Rows:</label>
+                         <input type="number" id="import-sheet-rows" value="4" min="1" step="1">
+                     </div>
+                     <div>
+                         <label for="import-sheet-width">Frame Width (px):</label>
+                         <input type="number" id="import-sheet-width" value="64" min="1" step="1">
+                     </div>
+                     <div>
+                         <label for="import-sheet-height">Frame Height (px):</label>
+                         <input type="number" id="import-sheet-height" value="64" min="1" step="1">
+                     </div>
+                 </div>
+                 <div class="mt-6 text-right">
+                     <button id="cancel-import-sheet" class="secondary">Cancel</button>
+                     <button id="load-sheet-button" class="primary">Load Sprite Sheet</button>
+                 </div>
+             </div>
+        </div>
+
     </div>
 
     <script>
         // --- DOM Elements ---
         const canvas = document.getElementById('sprite-canvas');
+        const canvasContainer = document.getElementById('canvas-container');
         const ctx = canvas.getContext('2d');
         const gridColsInput = document.getElementById('grid-cols');
         const gridRowsInput = document.getElementById('grid-rows');
         const frameWidthInput = document.getElementById('frame-width');
         const frameHeightInput = document.getElementById('frame-height');
-        const importButton = document.getElementById('import-button');
+        const importFramesButton = document.getElementById('import-frames-button');
+        const importSheetButton = document.getElementById('import-sheet-button');
         const saveButton = document.getElementById('save-button');
-        const fileInput = document.getElementById('file-input');
+        const deleteFrameButton = document.getElementById('delete-frame-button');
+        const frameFileInput = document.getElementById('frame-file-input');
+        const sheetFileInput = document.getElementById('sheet-file-input');
         const messageBox = document.getElementById('message-box');
+        const importSheetModal = document.getElementById('import-sheet-modal');
+        // Modal specific elements
+        const previewCanvas = document.getElementById('sprite-sheet-preview-canvas'); // New canvas
+        const previewCtx = previewCanvas.getContext('2d');
+        const importSheetColsInput = document.getElementById('import-sheet-cols');
+        const importSheetRowsInput = document.getElementById('import-sheet-rows');
+        const importSheetWidthInput = document.getElementById('import-sheet-width');
+        const importSheetHeightInput = document.getElementById('import-sheet-height');
+        const cancelImportSheetButton = document.getElementById('cancel-import-sheet');
+        const loadSheetButton = document.getElementById('load-sheet-button');
 
         // --- State Variables ---
         let gridCols = parseInt(gridColsInput.value);
         let gridRows = parseInt(gridRowsInput.value);
         let frameWidth = parseInt(frameWidthInput.value);
         let frameHeight = parseInt(frameHeightInput.value);
-        let placedImages = []; // Array to store { img: ImageObject, row: number, col: number, id: uniqueId }
-        let nextImageId = 0; // Simple ID counter for images
+        let placedImages = [];
+        let nextImageId = 0;
+        let selectedFrameId = null;
+        let sourceSpriteSheetImage = null; // Stores the original Image object for the imported sheet
+        // Preview canvas state
+        let previewScaleFactor = 1;
+        let previewOffsetX = 0;
+        let previewOffsetY = 0;
+        let previewDrawnWidth = 0;
+        let previewDrawnHeight = 0;
+        let isUpdatingInputs = false; // Flag to prevent infinite loops in input updates
+
 
         // --- Drag and Drop State ---
         let isDragging = false;
-        let draggedImage = null; // The object from placedImages being dragged
-        let startX, startY; // Mouse position at drag start
-        let offsetX, offsetY; // Offset from image top-left corner to mouse click
+        let dragMoved = false;
+        let draggedImage = null;
+        let startX, startY;
+        let dragStartX, dragStartY;
+        let offsetX, offsetY;
 
         // --- Utility Functions ---
         function showMessage(message, duration = 3000) {
             messageBox.textContent = message;
             messageBox.style.display = 'block';
-            // Clear previous timeouts if any
-            if (messageBox.timeoutId) {
-                clearTimeout(messageBox.timeoutId);
-            }
+            if (messageBox.timeoutId) clearTimeout(messageBox.timeoutId);
             messageBox.timeoutId = setTimeout(() => {
                 messageBox.style.display = 'none';
-                messageBox.timeoutId = null; // Clear the stored timeout ID
+                messageBox.timeoutId = null;
             }, duration);
+        }
+
+        // --- Selection Highlight ---
+        let selectionHighlight = null;
+        function createSelectionHighlight() {
+            if (!selectionHighlight) {
+                selectionHighlight = document.createElement('div');
+                selectionHighlight.className = 'selected-frame-highlight hidden';
+                canvasContainer.appendChild(selectionHighlight);
+            }
+        }
+        function updateSelectionHighlight() {
+            // ... (no changes needed here) ...
+            if (!selectionHighlight) createSelectionHighlight();
+            if (selectedFrameId !== null) {
+                const selectedItem = placedImages.find(item => item.id === selectedFrameId);
+                if (selectedItem) {
+                    selectionHighlight.style.left = `${selectedItem.col * frameWidth}px`;
+                    selectionHighlight.style.top = `${selectedItem.row * frameHeight}px`;
+                    selectionHighlight.style.width = `${frameWidth}px`;
+                    selectionHighlight.style.height = `${frameHeight}px`;
+                    selectionHighlight.classList.remove('hidden');
+                    deleteFrameButton.disabled = false; return;
+                }
+            }
+            selectionHighlight.classList.add('hidden');
+            deleteFrameButton.disabled = true;
         }
 
         // --- Canvas Drawing ---
         function drawGrid() {
-            // Use try...catch for drawing operations as well
-            try {
-                ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-                ctx.strokeStyle = '#e5e7eb'; // gray-200
-                ctx.lineWidth = 1;
-
-                // Draw vertical lines
+            // ... (no changes needed here) ...
+             try {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
                 for (let i = 0; i <= gridCols; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(i * frameWidth, 0);
-                    ctx.lineTo(i * frameWidth, canvas.height);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(i * frameWidth, 0); ctx.lineTo(i * frameWidth, canvas.height); ctx.stroke();
                 }
-
-                // Draw horizontal lines
                 for (let i = 0; i <= gridRows; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, i * frameHeight);
-                    ctx.lineTo(canvas.width, i * frameHeight);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i * frameHeight); ctx.lineTo(canvas.width, i * frameHeight); ctx.stroke();
                 }
-            } catch (e) {
-                console.error("Error drawing grid:", e);
-                showMessage("Error rendering grid. Check console.", 5000);
-            }
+            } catch (e) { console.error("Error drawing grid:", e); showMessage("Error rendering grid.", 5000); }
         }
 
         function drawImages() {
+             // ... (no changes needed here) ...
              try {
+                canvas.style.cursor = 'default';
                 placedImages.forEach(item => {
-                    if (item && item.img && item.img.complete) { // Ensure image is loaded
-                        // Don't draw the image being actively dragged at its original spot
+                    const drawX = item.col * frameWidth; const drawY = item.row * frameHeight;
+                    if (item && item.img && item.img.complete) {
                         if (!isDragging || item.id !== draggedImage?.id) {
-                            ctx.drawImage(
-                                item.img,
-                                item.col * frameWidth, // Destination x
-                                item.row * frameHeight, // Destination y
-                                frameWidth,           // Destination width
-                                frameHeight           // Destination height
-                            );
+                            ctx.drawImage(item.img, drawX, drawY, frameWidth, frameHeight);
                         }
                     } else if (item && item.img && !item.img.complete) {
-                        // Optionally draw a placeholder for loading images
-                        ctx.fillStyle = '#f3f4f6'; // gray-100
-                        ctx.fillRect(item.col * frameWidth + 2, item.row * frameHeight + 2, frameWidth - 4, frameHeight - 4);
-                        ctx.fillStyle = '#9ca3af'; // gray-400
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle'; // Center text vertically
-                        ctx.fillText('Loading...', item.col * frameWidth + frameWidth / 2, item.row * frameHeight + frameHeight / 2);
+                        ctx.fillStyle = '#f3f4f6'; ctx.fillRect(drawX + 2, drawY + 2, frameWidth - 4, frameHeight - 4);
+                        ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillText('Loading...', drawX + frameWidth / 2, drawY + frameHeight / 2);
                     }
                 });
-
-                // Draw the dragged image semi-transparently at the mouse position
                 if (isDragging && draggedImage && draggedImage.img && draggedImage.img.complete) {
-                    ctx.globalAlpha = 0.6; // Make it semi-transparent
-                    ctx.drawImage(
-                        draggedImage.img,
-                        startX - offsetX, // Current mouse x - offset
-                        startY - offsetY, // Current mouse y - offset
-                        frameWidth,
-                        frameHeight
-                    );
-                    ctx.globalAlpha = 1.0; // Reset transparency
+                    ctx.globalAlpha = 0.6;
+                    ctx.drawImage(draggedImage.img, startX - offsetX, startY - offsetY, frameWidth, frameHeight);
+                    ctx.globalAlpha = 1.0; canvas.style.cursor = 'grabbing';
                 }
-             } catch (e) {
-                 console.error("Error drawing images:", e);
-                 showMessage("Error rendering images. Check console.", 5000);
-                 // Attempt to reset dragging state if error occurs during drag render
-                 if (isDragging) {
-                     isDragging = false;
-                     draggedImage = null;
-                     canvas.style.cursor = 'grab';
-                 }
-             }
+             } catch (e) { console.error("Error drawing images:", e); showMessage("Error rendering images.", 5000); if (isDragging) { isDragging = false; draggedImage = null; canvas.style.cursor = 'default'; } }
         }
 
         function redrawCanvas() {
-            try {
-                // Update canvas dimensions
-                const newCanvasWidth = gridCols * frameWidth;
-                const newCanvasHeight = gridRows * frameHeight;
-
-                // Basic validation for canvas size
-                if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) {
-                    console.warn("Skipping redraw due to invalid canvas dimensions:", newCanvasWidth, newCanvasHeight);
-                    return;
-                }
-
-                // Avoid unnecessary resize if dimensions haven't changed
+             // ... (no changes needed here) ...
+             try {
+                const newCanvasWidth = gridCols * frameWidth; const newCanvasHeight = gridRows * frameHeight;
+                if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) { console.warn("Skipping redraw: invalid dimensions", newCanvasWidth, newCanvasHeight); if (canvas.width > 0 && canvas.height > 0) ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
                 if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
-                    canvas.width = newCanvasWidth;
-                    canvas.height = newCanvasHeight;
-                     // Update style dimensions
-                    canvas.style.width = `${newCanvasWidth}px`;
-                    canvas.style.height = `${newCanvasHeight}px`;
+                    canvas.width = newCanvasWidth; canvas.height = newCanvasHeight;
+                    canvas.style.width = `${newCanvasWidth}px`; canvas.style.height = `${newCanvasHeight}px`;
                 }
-
-                drawGrid();
-                drawImages();
-            } catch (e) {
-                 console.error("Error in redrawCanvas:", e);
-                 showMessage("Error updating canvas. Check console.", 5000);
-            }
+                drawGrid(); drawImages(); updateSelectionHighlight();
+            } catch (e) { console.error("Error in redrawCanvas:", e); showMessage("Error updating canvas.", 5000); }
         }
 
         // --- Event Handlers ---
         function handleSizeChange() {
-            const newCols = parseInt(gridColsInput.value);
-            const newRows = parseInt(gridRowsInput.value);
-            const newFrameW = parseInt(frameWidthInput.value);
-            const newFrameH = parseInt(frameHeightInput.value);
-
-            if (isNaN(newCols) || isNaN(newRows) || isNaN(newFrameW) || isNaN(newFrameH) ||
-                newCols < 1 || newRows < 1 || newFrameW < 1 || newFrameH < 1) {
+             // ... (no changes needed here) ...
+            const newCols = parseInt(gridColsInput.value); const newRows = parseInt(gridRowsInput.value);
+            const newFrameW = parseInt(frameWidthInput.value); const newFrameH = parseInt(frameHeightInput.value);
+            if (isNaN(newCols) || isNaN(newRows) || isNaN(newFrameW) || isNaN(newFrameH) || newCols < 1 || newRows < 1 || newFrameW < 1 || newFrameH < 1) {
                 showMessage("Invalid size: values must be positive numbers.");
-                // Reset inputs to previous valid values
-                gridColsInput.value = gridCols;
-                gridRowsInput.value = gridRows;
-                frameWidthInput.value = frameWidth;
-                frameHeightInput.value = frameHeight;
-                return;
+                gridColsInput.value = gridCols; gridRowsInput.value = gridRows; frameWidthInput.value = frameWidth; frameHeightInput.value = frameHeight; return;
             }
-
-            gridCols = newCols;
-            gridRows = newRows;
-            frameWidth = newFrameW;
-            frameHeight = newFrameH;
-
-            // Filter out images that are now outside the bounds
+            gridCols = newCols; gridRows = newRows; frameWidth = newFrameW; frameHeight = newFrameH;
+            const oldSelectedId = selectedFrameId;
             placedImages = placedImages.filter(item => item.row < gridRows && item.col < gridCols);
-
+            if (oldSelectedId !== null && !placedImages.some(item => item.id === oldSelectedId)) { selectedFrameId = null; }
             redrawCanvas();
         }
 
-        function handleImportClick() {
-            fileInput.click(); // Trigger hidden file input
-        }
-
-        function handleFileSelect(event) {
-            const files = event.target.files;
-            if (!files.length) return;
-
-            let imagesSuccessfullyLoaded = 0;
-            let imagesFailedToLoad = 0;
-            let slotsAttempted = 0;
-            let totalFiles = files.length;
-            let slotsAvailable = gridRows * gridCols - placedImages.length; // Calculate available slots initially
-
-            // Find the next available slot function (remains the same)
-            function findNextAvailableSlot() {
-                 for (let row = 0; row < gridRows; row++) {
-                    for (let col = 0; col < gridCols; col++) {
-                         const isOccupied = placedImages.some(img => img.row === row && img.col === col);
-                         if (!isOccupied) {
-                             return { row, col };
-                         }
-                    }
-                }
-                return null; // No more slots
-            }
-
-            // Show initial message if trying to import too many
-            if (totalFiles > slotsAvailable) {
-                 showMessage(`Attempting to import ${totalFiles} images, but only ${slotsAvailable} frames are empty. Some images will be skipped.`, 4000);
-            }
-
+        // --- Frame Import ---
+        function handleImportFramesClick() { frameFileInput.click(); }
+        function handleFrameFileSelect(event) { /* ... (no changes needed) ... */
+            const files = event.target.files; if (!files.length) return;
+            let imagesSuccessfullyLoaded = 0, imagesFailedToLoad = 0, slotsAttempted = 0, totalFiles = files.length;
+            let slotsAvailable = gridRows * gridCols - placedImages.length;
+            function findNextAvailableSlot() { for (let r = 0; r < gridRows; r++) for (let c = 0; c < gridCols; c++) if (!placedImages.some(img => img.row === r && img.col === c)) return { row: r, col: c }; return null; }
+            if (totalFiles > slotsAvailable) showMessage(`Attempting ${totalFiles} frames, only ${slotsAvailable} slots empty.`, 4000);
             Array.from(files).forEach((file) => {
-                slotsAttempted++;
-
-                const reader = new FileReader();
-
+                slotsAttempted++; const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
-                    img.onload = () => {
-                        const slot = findNextAvailableSlot();
-                        if (slot) {
-                            placedImages.push({
-                                img: img,
-                                row: slot.row,
-                                col: slot.col,
-                                id: nextImageId++ // Assign unique ID
-                            });
-                            imagesSuccessfullyLoaded++;
-                            redrawCanvas(); // Redraw after each image loads and is placed
-                        } else {
-                             imagesFailedToLoad++; // Count as failed if no slot found after loading
-                             console.warn(`No slot found for loaded image: ${file.name}`);
-                             // Message about no more slots shown initially if needed
-                        }
-                        // Check if this is the last file processed (either success or failure)
-                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
-                             showMessage(`Import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} failed/skipped.`, 4000);
-                        }
-                    };
-                    img.onerror = () => {
-                        console.error("Failed to load image:", file.name);
-                        imagesFailedToLoad++;
-                        // Don't show individual error messages here, rely on the final summary
-                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
-                             showMessage(`Import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} failed/skipped. Check console for errors.`, 4000);
-                        }
-                    };
+                    img.onload = () => { const slot = findNextAvailableSlot(); if (slot) { placedImages.push({ img: img, row: slot.row, col: slot.col, id: nextImageId++ }); imagesSuccessfullyLoaded++; redrawCanvas(); } else { imagesFailedToLoad++; console.warn(`No slot for ${file.name}`); } if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000); };
+                    img.onerror = () => { console.error(`Failed load frame: ${file.name}`); imagesFailedToLoad++; if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000); };
                     img.src = e.target.result;
                 };
-
-                reader.onerror = () => {
-                    console.error("Failed to read file:", file.name);
-                    imagesFailedToLoad++;
-                    // Don't show individual error messages here, rely on the final summary
-                     if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
-                         showMessage(`Import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} failed/skipped. Check console for errors.`, 4000);
-                     }
-                };
-
+                reader.onerror = () => { console.error(`Failed read frame file: ${file.name}`); imagesFailedToLoad++; if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000); };
                 reader.readAsDataURL(file);
             });
-
-            // Reset file input to allow importing the same file(s) again
-            fileInput.value = '';
+            frameFileInput.value = '';
         }
 
-        // --- UPDATED Save Click Handler ---
-        function handleSaveClick() {
-            console.log("Save button clicked.");
-            if (placedImages.length === 0) {
-                showMessage("Nothing to save. Import some images first.");
-                console.log("Save cancelled: No images placed.");
-                return;
+        // --- Sprite Sheet Import ---
+        function handleImportSheetClick() { sheetFileInput.click(); }
+
+        // --- NEW: Update Preview Grid and Inputs ---
+        function updatePreviewGridAndInputs(changedInputId) {
+            if (isUpdatingInputs || !sourceSpriteSheetImage || !sourceSpriteSheetImage.complete) return; // Prevent loops and errors
+
+            isUpdatingInputs = true; // Set flag
+
+            const currentCols = parseInt(importSheetColsInput.value);
+            const currentRows = parseInt(importSheetRowsInput.value);
+            const currentWidth = parseInt(importSheetWidthInput.value);
+            const currentHeight = parseInt(importSheetHeightInput.value);
+            const imgWidth = sourceSpriteSheetImage.width;
+            const imgHeight = sourceSpriteSheetImage.height;
+
+            // Recalculate the *other* pair of values
+            try {
+                if (changedInputId === 'import-sheet-cols' || changedInputId === 'import-sheet-rows') {
+                    if (currentCols > 0 && currentRows > 0) {
+                        const newFrameW = Math.floor(imgWidth / currentCols);
+                        const newFrameH = Math.floor(imgHeight / currentRows);
+                        if (newFrameW > 0 && !isNaN(newFrameW)) importSheetWidthInput.value = newFrameW;
+                        if (newFrameH > 0 && !isNaN(newFrameH)) importSheetHeightInput.value = newFrameH;
+                    }
+                } else if (changedInputId === 'import-sheet-width' || changedInputId === 'import-sheet-height') {
+                    if (currentWidth > 0 && currentHeight > 0) {
+                        const newCols = Math.floor(imgWidth / currentWidth);
+                        const newRows = Math.floor(imgHeight / currentHeight);
+                         if (newCols > 0 && !isNaN(newCols)) importSheetColsInput.value = newCols;
+                         if (newRows > 0 && !isNaN(newRows)) importSheetRowsInput.value = newRows;
+                    }
+                }
+            } catch (e) {
+                 console.error("Error during dimension recalculation:", e);
             }
 
-            // --- Prompt for filename ---
-            let desiredFilename = prompt("Enter filename for the sprite sheet (e.g., 'player_walk.png'):", "spritesheet.png");
 
-            // Handle cancellation or empty input
-            if (desiredFilename === null) {
-                console.log("User cancelled filename prompt. Save aborted.");
-                showMessage("Save cancelled.");
-                return; // Abort the save if user cancels the prompt
+            // --- Redraw Preview Canvas with Grid ---
+            try {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                // Draw the scaled image first (using stored scale/offset)
+                previewCtx.drawImage(sourceSpriteSheetImage, previewOffsetX, previewOffsetY, previewDrawnWidth, previewDrawnHeight);
+
+                // Get potentially updated values after recalculation
+                const finalCols = parseInt(importSheetColsInput.value);
+                const finalRows = parseInt(importSheetRowsInput.value);
+                const finalFrameW = parseInt(importSheetWidthInput.value);
+                const finalFrameH = parseInt(importSheetHeightInput.value);
+
+                if (isNaN(finalCols) || isNaN(finalRows) || isNaN(finalFrameW) || isNaN(finalFrameH) ||
+                    finalCols < 1 || finalRows < 1 || finalFrameW < 1 || finalFrameH < 1) {
+                    console.warn("Invalid dimensions for preview grid.");
+                    isUpdatingInputs = false; // Clear flag before returning
+                    return;
+                }
+
+                // Calculate scaled frame dimensions on the preview canvas
+                const previewFrameW = finalFrameW * previewScaleFactor;
+                const previewFrameH = finalFrameH * previewScaleFactor;
+
+                previewCtx.strokeStyle = 'rgba(255, 0, 0, 0.7)'; // Red semi-transparent lines
+                previewCtx.lineWidth = 1;
+
+                // Draw vertical lines
+                for (let i = 1; i < finalCols; i++) {
+                    const x = previewOffsetX + i * previewFrameW;
+                    previewCtx.beginPath();
+                    previewCtx.moveTo(x, previewOffsetY);
+                    previewCtx.lineTo(x, previewOffsetY + previewDrawnHeight);
+                    previewCtx.stroke();
+                }
+
+                // Draw horizontal lines
+                for (let i = 1; i < finalRows; i++) {
+                    const y = previewOffsetY + i * previewFrameH;
+                    previewCtx.beginPath();
+                    previewCtx.moveTo(previewOffsetX, y);
+                    previewCtx.lineTo(previewOffsetX + previewDrawnWidth, y);
+                    previewCtx.stroke();
+                }
+            } catch (e) {
+                 console.error("Error drawing preview grid:", e);
             }
-            desiredFilename = desiredFilename.trim();
-            if (desiredFilename === "") {
-                desiredFilename = "spritesheet.png"; // Use default if empty after trimming
-                console.log("Empty filename entered, using default: spritesheet.png");
+
+
+            isUpdatingInputs = false; // Clear flag
+        }
+
+
+        function handleSheetFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                sourceSpriteSheetImage = new Image();
+                sourceSpriteSheetImage.onload = () => {
+                    // --- Draw image to preview canvas and calculate scaling ---
+                    const maxWidth = 450; // Max width for preview canvas (modal width - padding)
+                    const maxHeight = 300; // Max height
+                    const imgWidth = sourceSpriteSheetImage.width;
+                    const imgHeight = sourceSpriteSheetImage.height;
+
+                    const widthScale = maxWidth / imgWidth;
+                    const heightScale = maxHeight / imgHeight;
+                    previewScaleFactor = Math.min(widthScale, heightScale, 1); // Don't scale up
+
+                    previewDrawnWidth = imgWidth * previewScaleFactor;
+                    previewDrawnHeight = imgHeight * previewScaleFactor;
+
+                    // Set canvas dimensions
+                    previewCanvas.width = previewDrawnWidth > 0 ? previewDrawnWidth : maxWidth; // Use drawn width or max
+                    previewCanvas.height = previewDrawnHeight > 0 ? previewDrawnHeight : maxHeight; // Use drawn height or max
+                    // Center the image if canvas is larger than drawn image (less likely with dynamic sizing)
+                    previewOffsetX = (previewCanvas.width - previewDrawnWidth) / 2;
+                    previewOffsetY = (previewCanvas.height - previewDrawnHeight) / 2;
+
+                    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                    previewCtx.drawImage(sourceSpriteSheetImage, previewOffsetX, previewOffsetY, previewDrawnWidth, previewDrawnHeight);
+                    // --- End preview drawing ---
+
+
+                    // Try to guess initial dimensions
+                    const aspect = imgWidth / imgHeight;
+                    let guessCols = 4, guessRows = 4;
+                    if (aspect > 1.5 && imgHeight > 0) { guessCols = 8; guessRows = Math.max(1, Math.round(8 / aspect)); }
+                    else if (aspect < 0.6 && imgWidth > 0) { guessRows = 8; guessCols = Math.max(1, Math.round(8 * aspect)); }
+
+                    // Ensure guesses result in positive frame sizes
+                    let guessFrameW = (guessCols > 0) ? Math.floor(imgWidth / guessCols) : imgWidth;
+                    let guessFrameH = (guessRows > 0) ? Math.floor(imgHeight / guessRows) : imgHeight;
+
+                    if (guessFrameW <= 0) guessFrameW = 1;
+                    if (guessFrameH <= 0) guessFrameH = 1;
+                    if (guessCols <= 0) guessCols = Math.max(1, Math.floor(imgWidth / guessFrameW));
+                    if (guessRows <= 0) guessRows = Math.max(1, Math.floor(imgHeight / guessFrameH));
+
+
+                    importSheetColsInput.value = guessCols;
+                    importSheetRowsInput.value = guessRows;
+                    importSheetWidthInput.value = guessFrameW;
+                    importSheetHeightInput.value = guessFrameH;
+
+                    // Add event listeners to modal inputs
+                    importSheetColsInput.addEventListener('input', () => updatePreviewGridAndInputs('import-sheet-cols'));
+                    importSheetRowsInput.addEventListener('input', () => updatePreviewGridAndInputs('import-sheet-rows'));
+                    importSheetWidthInput.addEventListener('input', () => updatePreviewGridAndInputs('import-sheet-width'));
+                    importSheetHeightInput.addEventListener('input', () => updatePreviewGridAndInputs('import-sheet-height'));
+
+                    // Initial draw of grid on preview
+                    updatePreviewGridAndInputs(null); // Pass null or undefined initially
+
+                    // Show modal
+                    importSheetModal.classList.remove('hidden');
+                };
+                sourceSpriteSheetImage.onerror = () => {
+                    showMessage("Error: Could not load the selected image file.", 5000);
+                    sourceSpriteSheetImage = null;
+                };
+                sourceSpriteSheetImage.src = e.target.result;
+            }
+            reader.onerror = () => {
+                 showMessage("Error: Could not read the selected file.", 5000);
+            }
+            reader.readAsDataURL(file);
+            sheetFileInput.value = ''; // Reset file input
+        }
+
+        function handleCancelImportSheet() {
+            importSheetModal.classList.add('hidden');
+            sourceSpriteSheetImage = null; // Clear stored image
+            // Clear preview canvas
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+             // Remove event listeners to prevent memory leaks (optional but good practice)
+             importSheetColsInput.replaceWith(importSheetColsInput.cloneNode(true));
+             importSheetRowsInput.replaceWith(importSheetRowsInput.cloneNode(true));
+             importSheetWidthInput.replaceWith(importSheetWidthInput.cloneNode(true));
+             importSheetHeightInput.replaceWith(importSheetHeightInput.cloneNode(true));
+             // Re-acquire references if needed, although not strictly necessary if modal is hidden
+        }
+
+        function handleLoadSpriteSheet() {
+            // ... (validation remains the same) ...
+            const importCols = parseInt(importSheetColsInput.value); const importRows = parseInt(importSheetRowsInput.value);
+            const importFrameW = parseInt(importSheetWidthInput.value); const importFrameH = parseInt(importSheetHeightInput.value);
+            if (isNaN(importCols) || isNaN(importRows) || isNaN(importFrameW) || isNaN(importFrameH) || importCols < 1 || importRows < 1 || importFrameW < 1 || importFrameH < 1) { showMessage("Invalid dimensions for sprite sheet.", 4000); return; }
+            if (!sourceSpriteSheetImage || !sourceSpriteSheetImage.complete) { showMessage("Error: Source image not loaded.", 4000); return; }
+            if (importCols * importFrameW > sourceSpriteSheetImage.width + 5 || importRows * importFrameH > sourceSpriteSheetImage.height + 5) { /* Added tolerance */ if (!confirm(`Warning: Dimensions (${importCols}x${importRows}, ${importFrameW}x${importFrameH}px) might exceed image size (${sourceSpriteSheetImage.width}x${sourceSpriteSheetImage.height}px). Continue?`)) { return; } }
+
+            console.log(`Loading sheet: ${importCols}x${importRows} frames, ${importFrameW}x${importFrameH}px each.`);
+            showMessage("Processing sprite sheet...", 10000);
+
+            gridColsInput.value = importCols; gridRowsInput.value = importRows;
+            frameWidthInput.value = importFrameW; frameHeightInput.value = importFrameH;
+            handleSizeChange(); // Update internal state
+
+            placedImages = []; nextImageId = 0; selectedFrameId = null;
+
+            const promises = [];
+            // ... (Promise creation loop remains the same) ...
+            for (let r = 0; r < importRows; r++) {
+                for (let c = 0; c < importCols; c++) {
+                    const sx = c * importFrameW; const sy = r * importFrameH;
+                    const framePromise = new Promise((resolve, reject) => {
+                        const frameCanvas = document.createElement('canvas'); frameCanvas.width = importFrameW; frameCanvas.height = importFrameH;
+                        const frameCtx = frameCanvas.getContext('2d');
+                        try {
+                            frameCtx.drawImage(sourceSpriteSheetImage, sx, sy, importFrameW, importFrameH, 0, 0, importFrameW, importFrameH);
+                            const frameImg = new Image();
+                            frameImg.onload = () => resolve({ img: frameImg, row: r, col: c });
+                            frameImg.onerror = (err) => { console.error(`Error loading data URL frame [${r}, ${c}]`, err); reject(`Failed load frame ${r}-${c}`); };
+                            frameImg.src = frameCanvas.toDataURL('image/png');
+                        } catch (e) { console.error(`Error drawing frame [${r}, ${c}]`, e); reject(`Failed draw frame ${r}-${c}`); }
+                    });
+                    promises.push(framePromise);
+                }
             }
 
-            // Ensure filename ends with .png
-            if (!desiredFilename.toLowerCase().endsWith('.png')) {
-                desiredFilename += '.png';
-            }
-            console.log(`Using filename: ${desiredFilename}`);
-            // --- End of filename prompt ---
+            // ... (Promise.all handling remains the same) ...
+             Promise.all(promises)
+                .then((loadedFramesData) => {
+                    placedImages = loadedFramesData.map(data => ({ img: data.img, row: data.row, col: data.col, id: nextImageId++ }));
+                    console.log("All frames processed."); redrawCanvas();
+                    showMessage(`Sheet loaded! ${loadedFramesData.length} frames placed.`, 4000);
+                })
+                .catch((error) => { console.error("Error processing frames:", error); showMessage(`Error loading sheet: ${error}.`, 5000); redrawCanvas(); })
+                .finally(() => { handleCancelImportSheet(); }); // Use updated cancel function
+        }
 
 
-            // Create a temporary canvas for the final output
+        // --- Save Handler ---
+        function handleSaveClick() { /* ... (no changes needed) ... */
+            console.log("Save click."); if (placedImages.length === 0) { showMessage("Nothing to save."); return; }
+            let desiredFilename = prompt("Enter filename:", "spritesheet.png"); if (desiredFilename === null) { showMessage("Save cancelled."); return; }
+            desiredFilename = desiredFilename.trim() || "spritesheet.png"; if (!desiredFilename.toLowerCase().endsWith('.png')) desiredFilename += '.png';
             const tempCanvas = document.createElement('canvas');
             try {
-                 // Check for excessively large canvas dimensions before creating
-                 const maxWidth = 16384; // Common browser limit, though varies
-                 const maxHeight = 16384;
-                 const requiredWidth = gridCols * frameWidth;
-                 const requiredHeight = gridRows * frameHeight;
-
-                 if (requiredWidth <= 0 || requiredHeight <= 0) {
-                      showMessage("Invalid dimensions for saving (<= 0).");
-                      console.error("Save error: Invalid dimensions", requiredWidth, requiredHeight);
-                      return;
-                 }
-                 if (requiredWidth > maxWidth || requiredHeight > maxHeight) {
-                     showMessage(`Sprite sheet dimensions (${requiredWidth}x${requiredHeight}) may exceed browser limits (${maxWidth}x${maxHeight}). Saving might fail.`, 5000);
-                     console.warn("Potential save issue: Large canvas dimensions.");
-                 }
-
-                tempCanvas.width = requiredWidth;
-                tempCanvas.height = requiredHeight;
-                const tempCtx = tempCanvas.getContext('2d');
-                console.log(`Created temporary canvas: ${tempCanvas.width}x${tempCanvas.height}`);
-
-                let imagesDrawn = 0;
-                let imagesSkipped = 0;
-
-                // Draw only the images onto the temporary canvas
-                placedImages.forEach(item => {
-                    if (item && item.img && item.img.complete) { // Check if image is loaded
-                        try {
-                            tempCtx.drawImage(
-                                item.img,
-                                item.col * frameWidth,
-                                item.row * frameHeight,
-                                frameWidth,
-                                frameHeight
-                            );
-                            imagesDrawn++;
-                        } catch (e) {
-                            console.error(`Error drawing image ID ${item.id} to save canvas:`, e, item.img.src);
-                            showMessage(`Error preparing image at [${item.row}, ${item.col}] for saving. It might be missing.`, 5000);
-                            imagesSkipped++;
-                        }
-                    } else if (item && item.img && !item.img.complete) {
-                        console.warn(`Image ID ${item.id} at [${item.row}, ${item.col}] is not fully loaded. Skipping in saved sheet.`);
-                        showMessage(`Warning: Image at [${item.row}, ${item.col}] was not fully loaded and is missing from the saved sheet.`, 5000);
-                        imagesSkipped++;
-                    } else {
-                        console.warn(`Skipping item at [${item.row}, ${item.col}] due to missing image data.`);
-                        imagesSkipped++;
-                    }
-                });
-                console.log(`Drawing complete: ${imagesDrawn} drawn, ${imagesSkipped} skipped.`);
-
-                if (imagesDrawn === 0 && placedImages.length > 0) {
-                     showMessage("Could not draw any images to the final sprite sheet. Check console.", 5000);
-                     console.error("Save error: No images were successfully drawn to the temp canvas.");
-                     return;
-                }
-
-                // Trigger download
-                console.log("Attempting to generate data URL...");
-                const dataURL = tempCanvas.toDataURL('image/png');
-                console.log("Data URL generated (length):", dataURL.length);
-
-                const link = document.createElement('a');
-                link.href = dataURL;
-                link.download = desiredFilename; // Use the user-provided or default filename
-
-                console.log("Appending link and triggering click...");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                console.log("Link clicked and removed.");
-                showMessage(`Sprite sheet saved as ${desiredFilename}! (${imagesDrawn} frames)`);
-
-            } catch (e) {
-                console.error("Error during sprite sheet saving process:", e);
-                showMessage("Error saving sprite sheet. Check browser console for details.", 5000);
-                // Specific checks for common errors
-                if (e instanceof DOMException && e.name === 'SecurityError') {
-                    showMessage("Save Error: Canvas may be tainted (e.g., due to cross-origin images without CORS).", 6000);
-                } else if (e instanceof Error && e.message.toLowerCase().includes("canvas too large")) {
-                     showMessage("Save Error: The generated sprite sheet is too large for the browser to handle.", 6000);
-                } else if (e instanceof TypeError && e.message.includes("toDataURL")) {
-                    showMessage("Save Error: Could not convert canvas to image data.", 6000);
-                }
-            }
+                 const requiredWidth = gridCols * frameWidth; const requiredHeight = gridRows * frameHeight;
+                 if (requiredWidth <= 0 || requiredHeight <= 0) { showMessage("Invalid dimensions."); return; }
+                tempCanvas.width = requiredWidth; tempCanvas.height = requiredHeight; const tempCtx = tempCanvas.getContext('2d'); let imagesDrawn = 0;
+                placedImages.forEach(item => { if (item && item.img && item.img.complete) { try { tempCtx.drawImage(item.img, item.col * frameWidth, item.row * frameHeight, frameWidth, frameHeight); imagesDrawn++; } catch (e) { console.error(`Err draw ID ${item.id}`, e); } } else { console.warn(`Skip unload ID ${item?.id}`); } });
+                if (imagesDrawn === 0 && placedImages.length > 0) { showMessage("Could not draw images.", 5000); return; }
+                const dataURL = tempCanvas.toDataURL('image/png'); const link = document.createElement('a'); link.href = dataURL; link.download = desiredFilename; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                showMessage(`Saved as ${desiredFilename}! (${imagesDrawn} frames)`);
+            } catch (e) { console.error("Error saving:", e); showMessage("Error saving. See console.", 5000); }
         }
 
+         // --- Delete Handler ---
+         function handleDeleteSelected() { /* ... (no changes needed) ... */
+             if (selectedFrameId === null) { showMessage("No frame selected."); return; }
+             const index = placedImages.findIndex(item => item.id === selectedFrameId);
+             if (index !== -1) { const deletedItem = placedImages.splice(index, 1)[0]; console.log(`Deleted ID ${selectedFrameId}`); selectedFrameId = null; redrawCanvas(); showMessage("Frame deleted."); }
+             else { showMessage("Selected frame not found."); selectedFrameId = null; updateSelectionHighlight(); }
+         }
 
-        // --- Drag and Drop Logic ---
 
-        function getMousePos(canvas, evt) {
-            const rect = canvas.getBoundingClientRect();
-            // Use pageX/pageY for broader compatibility if clientX/Y is not available (though unlikely)
-            const clientX = evt.clientX ?? evt.touches?.[0]?.clientX ?? evt.pageX;
-            const clientY = evt.clientY ?? evt.touches?.[0]?.clientY ?? evt.pageY;
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-        }
-
-        function handleMouseDown(event) {
-            if (event.type === 'touchstart') event.preventDefault();
-
-            const pos = getMousePos(canvas, event);
-            startX = pos.x;
-            startY = pos.y;
-
-            const clickedCol = Math.floor(pos.x / frameWidth);
-            const clickedRow = Math.floor(pos.y / frameHeight);
-
-             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) {
-                 draggedImage = null;
-                 isDragging = false;
-                 return;
-             }
-
-            draggedImage = placedImages.find(item => item.row === clickedRow && item.col === clickedCol);
-
-            if (draggedImage) {
-                isDragging = true;
-                offsetX = pos.x - (draggedImage.col * frameWidth);
-                offsetY = pos.y - (draggedImage.row * frameHeight);
-                canvas.style.cursor = 'grabbing';
-                redrawCanvas();
-            } else {
-                 canvas.style.cursor = 'grab';
-                 isDragging = false;
-            }
-        }
-
-        function handleMouseMove(event) {
-            if (!isDragging || !draggedImage) return;
-             if (event.type === 'touchmove') event.preventDefault();
-
-            const pos = getMousePos(canvas, event);
-            startX = pos.x;
-            startY = pos.y;
-            redrawCanvas();
-        }
-
-        function handleMouseUp(event) {
-            if (!isDragging || !draggedImage) return;
-
-            isDragging = false;
-            canvas.style.cursor = 'grab';
-
-            const pos = getMousePos(canvas, event);
-
-            // Check for valid frameWidth/Height before calculating target
-            if (frameWidth <= 0 || frameHeight <= 0) {
-                 console.warn("Cannot determine target cell due to invalid frame dimensions.");
-                 draggedImage = null;
-                 redrawCanvas();
-                 return;
-            }
-
-            const targetCol = Math.floor(pos.x / frameWidth);
-            const targetRow = Math.floor(pos.y / frameHeight);
-
-            if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) {
-                const existingImage = placedImages.find(item => item.row === targetRow && item.col === targetCol && item.id !== draggedImage.id);
-
-                if (!existingImage) {
-                    draggedImage.row = targetRow;
-                    draggedImage.col = targetCol;
-                } else {
-                    showMessage("Target frame is already occupied.");
-                }
-            } else {
-                 showMessage("Dropped outside the grid.");
-            }
-
-            draggedImage = null;
-            redrawCanvas();
-        }
-
-        function handleMouseLeave(event) {
-             if (isDragging) {
-                isDragging = false;
-                draggedImage = null;
-                canvas.style.cursor = 'grab';
-                redrawCanvas();
-                showMessage("Drag cancelled (mouse left canvas).");
-             }
-        }
+        // --- Drag and Drop & Selection Logic ---
+        function getMousePos(canvas, evt) { /* ... (no changes needed) ... */
+            const rect = canvas.getBoundingClientRect(); const clientX = evt.clientX ?? evt.touches?.[0]?.clientX; const clientY = evt.clientY ?? evt.touches?.[0]?.clientY; if (typeof clientX !== 'number' || typeof clientY !== 'number') { console.warn("No mouse pos."); return null; } return { x: clientX - rect.left, y: clientY - rect.top }; }
+        function handleMouseDown(event) { /* ... (no changes needed) ... */
+             const pos = getMousePos(canvas, event); if (!pos) return; if (event.type === 'touchstart') event.preventDefault(); startX = pos.x; startY = pos.y; dragStartX = event.clientX ?? event.touches?.[0]?.clientX; dragStartY = event.clientY ?? event.touches?.[0]?.clientY; dragMoved = false;
+             const clickedCol = Math.floor(pos.x / frameWidth); const clickedRow = Math.floor(pos.y / frameHeight);
+             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) { if (selectedFrameId !== null) { selectedFrameId = null; redrawCanvas(); } draggedImage = null; isDragging = false; return; }
+             const clickedImage = placedImages.find(item => item.row === clickedRow && item.col === clickedCol);
+             if (clickedImage) { draggedImage = clickedImage; isDragging = false; offsetX = pos.x - (draggedImage.col * frameWidth); offsetY = pos.y - (draggedImage.row * frameHeight); canvas.style.cursor = 'grab'; if (selectedFrameId !== clickedImage.id) { selectedFrameId = clickedImage.id; redrawCanvas(); } }
+             else { draggedImage = null; isDragging = false; canvas.style.cursor = 'default'; if (selectedFrameId !== null) { selectedFrameId = null; redrawCanvas(); } } }
+        function handleMouseMove(event) { /* ... (no changes needed) ... */
+             if (!draggedImage) return; const currentX = event.clientX ?? event.touches?.[0]?.clientX; const currentY = event.clientY ?? event.touches?.[0]?.clientY; if (typeof currentX !== 'number' || typeof currentY !== 'number') return; const moveThreshold = 5;
+             if (!isDragging && (Math.abs(currentX - dragStartX) > moveThreshold || Math.abs(currentY - dragStartY) > moveThreshold)) { isDragging = true; dragMoved = true; selectedFrameId = null; canvas.style.cursor = 'grabbing'; console.log("Drag start ID:", draggedImage.id); }
+             if (isDragging) { if (event.type === 'touchmove') event.preventDefault(); const pos = getMousePos(canvas, event); if (!pos) return; startX = pos.x; startY = pos.y; redrawCanvas(); } }
+        function handleMouseUp(event) { /* ... (no changes needed) ... */
+            const wasDragging = isDragging; const currentlyDragged = draggedImage;
+            if (isDragging) { isDragging = false; canvas.style.cursor = 'default'; const pos = getMousePos(canvas, event); if (pos && frameWidth > 0 && frameHeight > 0 && currentlyDragged) { const targetCol = Math.floor(pos.x / frameWidth); const targetRow = Math.floor(pos.y / frameHeight); if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) { const existingImage = placedImages.find(item => item.row === targetRow && item.col === targetCol && item.id !== currentlyDragged.id); if (!existingImage) { currentlyDragged.row = targetRow; currentlyDragged.col = targetCol; console.log(`Drop ID ${currentlyDragged.id} at [${targetRow}, ${targetCol}]`); } else { showMessage("Target occupied."); console.log(`Drop fail ID ${currentlyDragged.id}: target [${targetRow}, ${targetCol}] occupied`); } } else { showMessage("Dropped outside grid."); console.log(`Drop fail ID ${currentlyDragged.id}: outside grid`); } } else { console.warn("Could not get drop location."); } draggedImage = null; redrawCanvas(); }
+            else if (currentlyDragged && !dragMoved) { console.log(`Click ID ${currentlyDragged.id}. Sel state: ${selectedFrameId}`); canvas.style.cursor = 'grab'; }
+            if (!isDragging) { draggedImage = null; } dragMoved = false; }
+        function handleMouseLeave(event) { /* ... (no changes needed) ... */
+             if (isDragging) { isDragging = false; const previouslyDragged = draggedImage; draggedImage = null; canvas.style.cursor = 'default'; redrawCanvas(); showMessage("Drag cancelled."); console.log(`Drag cancel ID ${previouslyDragged?.id}`); } else if (canvas.style.cursor === 'grab') { canvas.style.cursor = 'default'; } }
 
 
         // --- Event Listeners ---
@@ -598,26 +683,33 @@
         gridRowsInput.addEventListener('change', handleSizeChange);
         frameWidthInput.addEventListener('change', handleSizeChange);
         frameHeightInput.addEventListener('change', handleSizeChange);
-        importButton.addEventListener('click', handleImportClick);
-        fileInput.addEventListener('change', handleFileSelect);
-        saveButton.addEventListener('click', handleSaveClick); // Points to the updated handler
+        importFramesButton.addEventListener('click', handleImportFramesClick);
+        importSheetButton.addEventListener('click', handleImportSheetClick);
+        frameFileInput.addEventListener('change', handleFrameFileSelect);
+        sheetFileInput.addEventListener('change', handleSheetFileSelect);
+        saveButton.addEventListener('click', handleSaveClick);
+        deleteFrameButton.addEventListener('click', handleDeleteSelected);
 
-        // Drag and Drop Listeners (Mouse)
+        // Modal Listeners (Cancel/Load are added dynamically now)
+        cancelImportSheetButton.addEventListener('click', handleCancelImportSheet);
+        loadSheetButton.addEventListener('click', handleLoadSpriteSheet);
+        // Note: Input listeners for modal fields are added in handleSheetFileSelect
+
+        // Canvas Listeners (Mouse & Touch)
         canvas.addEventListener('mousedown', handleMouseDown);
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUp);
         canvas.addEventListener('mouseleave', handleMouseLeave);
-
-        // Drag and Drop Listeners (Touch) - passive: false allows preventDefault
         canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
         canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
         canvas.addEventListener('touchend', handleMouseUp);
-        canvas.addEventListener('touchcancel', handleMouseLeave); // Treat cancel like leave
+        canvas.addEventListener('touchcancel', handleMouseLeave);
 
 
         // --- Initial Setup ---
+        createSelectionHighlight(); // Create the highlight div initially
         redrawCanvas(); // Draw initial grid
-        console.log("Sprite Sheet Editor Initialized."); // Log initialization
+        console.log("Sprite Sheet Editor Initialized.");
 
     </script>
 
