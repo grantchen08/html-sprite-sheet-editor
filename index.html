@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Sheet Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif; /* Use Inter font */
+        }
+        canvas {
+            border: 1px solid #d1d5db; /* gray-300 */
+            cursor: grab; /* Indicate draggable items */
+            touch-action: none; /* Prevent default touch actions like scrolling */
+        }
+        canvas:active {
+            cursor: grabbing; /* Indicate dragging */
+        }
+        .control-panel label {
+            @apply block text-sm font-medium text-gray-700 mb-1;
+        }
+        .control-panel input[type="number"] {
+            @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2;
+        }
+        .control-panel button {
+            @apply inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50;
+        }
+        /* Style for the message box */
+        #message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none; /* Hidden by default */
+            z-index: 1000;
+            max-width: 90%;
+            text-align: center;
+        }
+    </style>
+    <style>
+      @font-face {
+        font-family: 'LucideIcons';
+        src: url(https://cdn.jsdelivr.net/npm/lucide-static@latest/font/Lucide.ttf) format('truetype');
+      }
+      .lucide {
+        font-family: 'LucideIcons';
+        font-style: normal;
+        font-weight: normal;
+        font-variant: normal;
+        text-rendering: auto;
+        line-height: 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        display: inline-block; /* Ensure proper alignment */
+        margin-right: 0.5em; /* Space between icon and text */
+      }
+      .lucide-upload::before { content: "\e90b"; } /* upload icon */
+      .lucide-save::before { content: "\e8b4"; } /* save icon */
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+    <div class="container mx-auto max-w-4xl bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-semibold text-gray-900 mb-6 text-center">Sprite Sheet Editor</h1>
+
+        <div class="control-panel grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 items-end">
+            <div>
+                <label for="grid-cols">Grid Columns:</label>
+                <input type="number" id="grid-cols" value="4" min="1">
+            </div>
+            <div>
+                <label for="grid-rows">Grid Rows:</label>
+                <input type="number" id="grid-rows" value="4" min="1">
+            </div>
+            <div>
+                <label for="frame-width">Frame Width (px):</label>
+                <input type="number" id="frame-width" value="64" min="1">
+            </div>
+            <div>
+                <label for="frame-height">Frame Height (px):</label>
+                <input type="number" id="frame-height" value="64" min="1">
+            </div>
+            <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                 <button id="import-button">
+                    <span class="lucide lucide-upload"></span>Import Images
+                </button>
+                <button id="save-button">
+                     <span class="lucide lucide-save"></span>Save Sprite Sheet
+                </button>
+            </div>
+        </div>
+
+        <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+
+        <div class="w-full overflow-auto border border-gray-300 rounded-md bg-gray-50" style="max-height: 60vh;">
+             <canvas id="sprite-canvas" class="block rounded-md"></canvas>
+        </div>
+
+        <div id="message-box"></div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('sprite-canvas');
+        const ctx = canvas.getContext('2d');
+        const gridColsInput = document.getElementById('grid-cols');
+        const gridRowsInput = document.getElementById('grid-rows');
+        const frameWidthInput = document.getElementById('frame-width');
+        const frameHeightInput = document.getElementById('frame-height');
+        const importButton = document.getElementById('import-button');
+        const saveButton = document.getElementById('save-button');
+        const fileInput = document.getElementById('file-input');
+        const messageBox = document.getElementById('message-box');
+
+        // --- State Variables ---
+        let gridCols = parseInt(gridColsInput.value);
+        let gridRows = parseInt(gridRowsInput.value);
+        let frameWidth = parseInt(frameWidthInput.value);
+        let frameHeight = parseInt(frameHeightInput.value);
+        let placedImages = []; // Array to store { img: ImageObject, row: number, col: number, id: uniqueId }
+        let nextImageId = 0; // Simple ID counter for images
+
+        // --- Drag and Drop State ---
+        let isDragging = false;
+        let draggedImage = null; // The object from placedImages being dragged
+        let startX, startY; // Mouse position at drag start
+        let offsetX, offsetY; // Offset from image top-left corner to mouse click
+
+        // --- Utility Functions ---
+        function showMessage(message, duration = 3000) {
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            // Clear previous timeouts if any
+            if (messageBox.timeoutId) {
+                clearTimeout(messageBox.timeoutId);
+            }
+            messageBox.timeoutId = setTimeout(() => {
+                messageBox.style.display = 'none';
+                messageBox.timeoutId = null; // Clear the stored timeout ID
+            }, duration);
+        }
+
+        // --- Canvas Drawing ---
+        function drawGrid() {
+            // Use try...catch for drawing operations as well
+            try {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+                ctx.strokeStyle = '#e5e7eb'; // gray-200
+                ctx.lineWidth = 1;
+
+                // Draw vertical lines
+                for (let i = 0; i <= gridCols; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * frameWidth, 0);
+                    ctx.lineTo(i * frameWidth, canvas.height);
+                    ctx.stroke();
+                }
+
+                // Draw horizontal lines
+                for (let i = 0; i <= gridRows; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * frameHeight);
+                    ctx.lineTo(canvas.width, i * frameHeight);
+                    ctx.stroke();
+                }
+            } catch (e) {
+                console.error("Error drawing grid:", e);
+                showMessage("Error rendering grid. Check console.", 5000);
+            }
+        }
+
+        function drawImages() {
+             try {
+                placedImages.forEach(item => {
+                    if (item && item.img && item.img.complete) { // Ensure image is loaded
+                        // Don't draw the image being actively dragged at its original spot
+                        if (!isDragging || item.id !== draggedImage?.id) {
+                            ctx.drawImage(
+                                item.img,
+                                item.col * frameWidth, // Destination x
+                                item.row * frameHeight, // Destination y
+                                frameWidth,           // Destination width
+                                frameHeight           // Destination height
+                            );
+                        }
+                    } else if (item && item.img && !item.img.complete) {
+                        // Optionally draw a placeholder for loading images
+                        ctx.fillStyle = '#f3f4f6'; // gray-100
+                        ctx.fillRect(item.col * frameWidth + 2, item.row * frameHeight + 2, frameWidth - 4, frameHeight - 4);
+                        ctx.fillStyle = '#9ca3af'; // gray-400
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle'; // Center text vertically
+                        ctx.fillText('Loading...', item.col * frameWidth + frameWidth / 2, item.row * frameHeight + frameHeight / 2);
+                    }
+                });
+
+                // Draw the dragged image semi-transparently at the mouse position
+                if (isDragging && draggedImage && draggedImage.img && draggedImage.img.complete) {
+                    ctx.globalAlpha = 0.6; // Make it semi-transparent
+                    ctx.drawImage(
+                        draggedImage.img,
+                        startX - offsetX, // Current mouse x - offset
+                        startY - offsetY, // Current mouse y - offset
+                        frameWidth,
+                        frameHeight
+                    );
+                    ctx.globalAlpha = 1.0; // Reset transparency
+                }
+             } catch (e) {
+                 console.error("Error drawing images:", e);
+                 showMessage("Error rendering images. Check console.", 5000);
+                 // Attempt to reset dragging state if error occurs during drag render
+                 if (isDragging) {
+                     isDragging = false;
+                     draggedImage = null;
+                     canvas.style.cursor = 'grab';
+                 }
+             }
+        }
+
+        function redrawCanvas() {
+            try {
+                // Update canvas dimensions
+                const newCanvasWidth = gridCols * frameWidth;
+                const newCanvasHeight = gridRows * frameHeight;
+
+                // Basic validation for canvas size
+                if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) {
+                    console.warn("Skipping redraw due to invalid canvas dimensions:", newCanvasWidth, newCanvasHeight);
+                    return;
+                }
+
+                // Avoid unnecessary resize if dimensions haven't changed
+                if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
+                    canvas.width = newCanvasWidth;
+                    canvas.height = newCanvasHeight;
+                     // Update style dimensions
+                    canvas.style.width = `${newCanvasWidth}px`;
+                    canvas.style.height = `${newCanvasHeight}px`;
+                }
+
+                drawGrid();
+                drawImages();
+            } catch (e) {
+                 console.error("Error in redrawCanvas:", e);
+                 showMessage("Error updating canvas. Check console.", 5000);
+            }
+        }
+
+        // --- Event Handlers ---
+        function handleSizeChange() {
+            const newCols = parseInt(gridColsInput.value);
+            const newRows = parseInt(gridRowsInput.value);
+            const newFrameW = parseInt(frameWidthInput.value);
+            const newFrameH = parseInt(frameHeightInput.value);
+
+            if (isNaN(newCols) || isNaN(newRows) || isNaN(newFrameW) || isNaN(newFrameH) ||
+                newCols < 1 || newRows < 1 || newFrameW < 1 || newFrameH < 1) {
+                showMessage("Invalid size: values must be positive numbers.");
+                // Reset inputs to previous valid values
+                gridColsInput.value = gridCols;
+                gridRowsInput.value = gridRows;
+                frameWidthInput.value = frameWidth;
+                frameHeightInput.value = frameHeight;
+                return;
+            }
+
+            gridCols = newCols;
+            gridRows = newRows;
+            frameWidth = newFrameW;
+            frameHeight = newFrameH;
+
+            // Filter out images that are now outside the bounds
+            placedImages = placedImages.filter(item => item.row < gridRows && item.col < gridCols);
+
+            redrawCanvas();
+        }
+
+        function handleImportClick() {
+            fileInput.click(); // Trigger hidden file input
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            let imagesSuccessfullyLoaded = 0;
+            let imagesFailedToLoad = 0;
+            let slotsAttempted = 0;
+            let totalFiles = files.length;
+            let slotsAvailable = gridRows * gridCols - placedImages.length; // Calculate available slots initially
+
+            // Find the next available slot function (remains the same)
+            function findNextAvailableSlot() {
+                 for (let row = 0; row < gridRows; row++) {
+                    for (let col = 0; col < gridCols; col++) {
+                         const isOccupied = placedImages.some(img => img.row === row && img.col === col);
+                         if (!isOccupied) {
+                             return { row, col };
+                         }
+                    }
+                }
+                return null; // No more slots
+            }
+
+            // Show initial message if trying to import too many
+            if (totalFiles > slotsAvailable) {
+                 showMessage(`Attempting to import ${totalFiles} images, but only ${slotsAvailable} frames are empty. Some images will be skipped.`, 4000);
+            }
+
+            Array.from(files).forEach((file) => {
+                slotsAttempted++;
+
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const slot = findNextAvailableSlot();
+                        if (slot) {
+                            placedImages.push({
+                                img: img,
+                                row: slot.row,
+                                col: slot.col,
+                                id: nextImageId++ // Assign unique ID
+                            });
+                            imagesSuccessfullyLoaded++;
+                            redrawCanvas(); // Redraw after each image loads and is placed
+                        } else {
+                             imagesFailedToLoad++; // Count as failed if no slot found after loading
+                             console.warn(`No slot found for loaded image: ${file.name}`);
+                             // Message about no more slots shown initially if needed
+                        }
+                        // Check if this is the last file processed (either success or failure)
+                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
+                             showMessage(`Import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} failed/skipped.`, 4000);
+                        }
+                    };
+                    img.onerror = () => {
+                        console.error("Failed to load image:", file.name);
+                        imagesFailedToLoad++;
+                        // Don't show individual error messages here, rely on the final summary
+                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
+                             showMessage(`Import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} failed/skipped. Check console for errors.`, 4000);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+
+                reader.onerror = () => {
+                    console.error("Failed to read file:", file.name);
+                    imagesFailedToLoad++;
+                    // Don't show individual error messages here, rely on the final summary
+                     if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
+                         showMessage(`Import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} failed/skipped. Check console for errors.`, 4000);
+                     }
+                };
+
+                reader.readAsDataURL(file);
+            });
+
+            // Reset file input to allow importing the same file(s) again
+            fileInput.value = '';
+        }
+
+        // --- UPDATED Save Click Handler ---
+        function handleSaveClick() {
+            console.log("Save button clicked.");
+            if (placedImages.length === 0) {
+                showMessage("Nothing to save. Import some images first.");
+                console.log("Save cancelled: No images placed.");
+                return;
+            }
+
+            // --- Prompt for filename ---
+            let desiredFilename = prompt("Enter filename for the sprite sheet (e.g., 'player_walk.png'):", "spritesheet.png");
+
+            // Handle cancellation or empty input
+            if (desiredFilename === null) {
+                console.log("User cancelled filename prompt. Save aborted.");
+                showMessage("Save cancelled.");
+                return; // Abort the save if user cancels the prompt
+            }
+            desiredFilename = desiredFilename.trim();
+            if (desiredFilename === "") {
+                desiredFilename = "spritesheet.png"; // Use default if empty after trimming
+                console.log("Empty filename entered, using default: spritesheet.png");
+            }
+
+            // Ensure filename ends with .png
+            if (!desiredFilename.toLowerCase().endsWith('.png')) {
+                desiredFilename += '.png';
+            }
+            console.log(`Using filename: ${desiredFilename}`);
+            // --- End of filename prompt ---
+
+
+            // Create a temporary canvas for the final output
+            const tempCanvas = document.createElement('canvas');
+            try {
+                 // Check for excessively large canvas dimensions before creating
+                 const maxWidth = 16384; // Common browser limit, though varies
+                 const maxHeight = 16384;
+                 const requiredWidth = gridCols * frameWidth;
+                 const requiredHeight = gridRows * frameHeight;
+
+                 if (requiredWidth <= 0 || requiredHeight <= 0) {
+                      showMessage("Invalid dimensions for saving (<= 0).");
+                      console.error("Save error: Invalid dimensions", requiredWidth, requiredHeight);
+                      return;
+                 }
+                 if (requiredWidth > maxWidth || requiredHeight > maxHeight) {
+                     showMessage(`Sprite sheet dimensions (${requiredWidth}x${requiredHeight}) may exceed browser limits (${maxWidth}x${maxHeight}). Saving might fail.`, 5000);
+                     console.warn("Potential save issue: Large canvas dimensions.");
+                 }
+
+                tempCanvas.width = requiredWidth;
+                tempCanvas.height = requiredHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+                console.log(`Created temporary canvas: ${tempCanvas.width}x${tempCanvas.height}`);
+
+                let imagesDrawn = 0;
+                let imagesSkipped = 0;
+
+                // Draw only the images onto the temporary canvas
+                placedImages.forEach(item => {
+                    if (item && item.img && item.img.complete) { // Check if image is loaded
+                        try {
+                            tempCtx.drawImage(
+                                item.img,
+                                item.col * frameWidth,
+                                item.row * frameHeight,
+                                frameWidth,
+                                frameHeight
+                            );
+                            imagesDrawn++;
+                        } catch (e) {
+                            console.error(`Error drawing image ID ${item.id} to save canvas:`, e, item.img.src);
+                            showMessage(`Error preparing image at [${item.row}, ${item.col}] for saving. It might be missing.`, 5000);
+                            imagesSkipped++;
+                        }
+                    } else if (item && item.img && !item.img.complete) {
+                        console.warn(`Image ID ${item.id} at [${item.row}, ${item.col}] is not fully loaded. Skipping in saved sheet.`);
+                        showMessage(`Warning: Image at [${item.row}, ${item.col}] was not fully loaded and is missing from the saved sheet.`, 5000);
+                        imagesSkipped++;
+                    } else {
+                        console.warn(`Skipping item at [${item.row}, ${item.col}] due to missing image data.`);
+                        imagesSkipped++;
+                    }
+                });
+                console.log(`Drawing complete: ${imagesDrawn} drawn, ${imagesSkipped} skipped.`);
+
+                if (imagesDrawn === 0 && placedImages.length > 0) {
+                     showMessage("Could not draw any images to the final sprite sheet. Check console.", 5000);
+                     console.error("Save error: No images were successfully drawn to the temp canvas.");
+                     return;
+                }
+
+                // Trigger download
+                console.log("Attempting to generate data URL...");
+                const dataURL = tempCanvas.toDataURL('image/png');
+                console.log("Data URL generated (length):", dataURL.length);
+
+                const link = document.createElement('a');
+                link.href = dataURL;
+                link.download = desiredFilename; // Use the user-provided or default filename
+
+                console.log("Appending link and triggering click...");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                console.log("Link clicked and removed.");
+                showMessage(`Sprite sheet saved as ${desiredFilename}! (${imagesDrawn} frames)`);
+
+            } catch (e) {
+                console.error("Error during sprite sheet saving process:", e);
+                showMessage("Error saving sprite sheet. Check browser console for details.", 5000);
+                // Specific checks for common errors
+                if (e instanceof DOMException && e.name === 'SecurityError') {
+                    showMessage("Save Error: Canvas may be tainted (e.g., due to cross-origin images without CORS).", 6000);
+                } else if (e instanceof Error && e.message.toLowerCase().includes("canvas too large")) {
+                     showMessage("Save Error: The generated sprite sheet is too large for the browser to handle.", 6000);
+                } else if (e instanceof TypeError && e.message.includes("toDataURL")) {
+                    showMessage("Save Error: Could not convert canvas to image data.", 6000);
+                }
+            }
+        }
+
+
+        // --- Drag and Drop Logic ---
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            // Use pageX/pageY for broader compatibility if clientX/Y is not available (though unlikely)
+            const clientX = evt.clientX ?? evt.touches?.[0]?.clientX ?? evt.pageX;
+            const clientY = evt.clientY ?? evt.touches?.[0]?.clientY ?? evt.pageY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function handleMouseDown(event) {
+            if (event.type === 'touchstart') event.preventDefault();
+
+            const pos = getMousePos(canvas, event);
+            startX = pos.x;
+            startY = pos.y;
+
+            const clickedCol = Math.floor(pos.x / frameWidth);
+            const clickedRow = Math.floor(pos.y / frameHeight);
+
+             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) {
+                 draggedImage = null;
+                 isDragging = false;
+                 return;
+             }
+
+            draggedImage = placedImages.find(item => item.row === clickedRow && item.col === clickedCol);
+
+            if (draggedImage) {
+                isDragging = true;
+                offsetX = pos.x - (draggedImage.col * frameWidth);
+                offsetY = pos.y - (draggedImage.row * frameHeight);
+                canvas.style.cursor = 'grabbing';
+                redrawCanvas();
+            } else {
+                 canvas.style.cursor = 'grab';
+                 isDragging = false;
+            }
+        }
+
+        function handleMouseMove(event) {
+            if (!isDragging || !draggedImage) return;
+             if (event.type === 'touchmove') event.preventDefault();
+
+            const pos = getMousePos(canvas, event);
+            startX = pos.x;
+            startY = pos.y;
+            redrawCanvas();
+        }
+
+        function handleMouseUp(event) {
+            if (!isDragging || !draggedImage) return;
+
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+
+            const pos = getMousePos(canvas, event);
+
+            // Check for valid frameWidth/Height before calculating target
+            if (frameWidth <= 0 || frameHeight <= 0) {
+                 console.warn("Cannot determine target cell due to invalid frame dimensions.");
+                 draggedImage = null;
+                 redrawCanvas();
+                 return;
+            }
+
+            const targetCol = Math.floor(pos.x / frameWidth);
+            const targetRow = Math.floor(pos.y / frameHeight);
+
+            if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) {
+                const existingImage = placedImages.find(item => item.row === targetRow && item.col === targetCol && item.id !== draggedImage.id);
+
+                if (!existingImage) {
+                    draggedImage.row = targetRow;
+                    draggedImage.col = targetCol;
+                } else {
+                    showMessage("Target frame is already occupied.");
+                }
+            } else {
+                 showMessage("Dropped outside the grid.");
+            }
+
+            draggedImage = null;
+            redrawCanvas();
+        }
+
+        function handleMouseLeave(event) {
+             if (isDragging) {
+                isDragging = false;
+                draggedImage = null;
+                canvas.style.cursor = 'grab';
+                redrawCanvas();
+                showMessage("Drag cancelled (mouse left canvas).");
+             }
+        }
+
+
+        // --- Event Listeners ---
+        gridColsInput.addEventListener('change', handleSizeChange);
+        gridRowsInput.addEventListener('change', handleSizeChange);
+        frameWidthInput.addEventListener('change', handleSizeChange);
+        frameHeightInput.addEventListener('change', handleSizeChange);
+        importButton.addEventListener('click', handleImportClick);
+        fileInput.addEventListener('change', handleFileSelect);
+        saveButton.addEventListener('click', handleSaveClick); // Points to the updated handler
+
+        // Drag and Drop Listeners (Mouse)
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseLeave);
+
+        // Drag and Drop Listeners (Touch) - passive: false allows preventDefault
+        canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
+        canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
+        canvas.addEventListener('touchend', handleMouseUp);
+        canvas.addEventListener('touchcancel', handleMouseLeave); // Treat cancel like leave
+
+
+        // --- Initial Setup ---
+        redrawCanvas(); // Draw initial grid
+        console.log("Sprite Sheet Editor Initialized."); // Log initialization
+
+    </script>
+
+</body>
+</html>
