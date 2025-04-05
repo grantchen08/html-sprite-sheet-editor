@@ -2,7 +2,7 @@
 
 A simple, browser-based tool to create sprite sheets from individual image files using drag-and-drop.
 
-![Screen Shot](demon.PNG)
+![Screen Shot](https://grantchen08.github.io/html-sprite-sheet-editor/demo.PNG)
 
 ## Description
 
