@@ -22,12 +22,47 @@
         canvas:active {
             /* cursor: grabbing; */ /* Set dynamically in JS */
         }
-        .control-panel label {
+        .control-panel label,
+        .modal-content label { /* Apply label style in modal too */
             @apply block text-sm font-medium text-gray-700 mb-1;
         }
-        .control-panel input[type="number"] {
-            @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2;
+
+        /* --- Custom CSS Input Styles (Applied via .gui-input class) --- */
+        .gui-input {
+            display: block;
+            width: 100%;
+            padding: 0.5rem; /* p-2 */
+            font-size: 0.875rem; /* text-sm */
+            color: #1f2937; /* gray-800 */
+            background-color: #ffffff; /* bg-white */
+            border: 1px solid #9ca3af; /* gray-400 */
+             /* Classic bevel effect borders - slightly different for inset feel */
+            border-top-color: #6b7280; /* gray-500 */
+            border-left-color: #6b7280; /* gray-500 */
+            border-bottom-color: #e5e7eb; /* gray-200 */
+            border-right-color: #e5e7eb; /* gray-200 */
+            border-radius: 0.25rem; /* rounded */
+            transition: border-color 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+            /* ***** FIX: Removed rules that hide spinners ***** */
+            /* -moz-appearance: textfield; */ /* REMOVED */
         }
+        /* ***** FIX: Removed rules that hide spinners ***** */
+        /* .gui-input::-webkit-outer-spin-button,
+        .gui-input::-webkit-inner-spin-button {
+             -webkit-appearance: none;
+             margin: 0;
+        } */
+        /* ***** END FIX ***** */
+
+        /* Custom focus style for inputs */
+         .gui-input:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            /* Replicate Tailwind focus ring using box-shadow */
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #6366f1; /* ring-2 ring-indigo-500 ring-offset-2 */
+            border-color: #6366f1; /* focus:border-indigo-500 */
+         }
+        /* --- End of Custom Input Styles --- */
 
         /* --- Custom CSS Button Styles --- */
         .gui-button {
@@ -60,8 +95,6 @@
         .gui-button:active {
             background-color: #d1d5db; /* gray-300 */
             border-style: inset; /* Inset border on click */
-            /* Adjust padding slightly for inset effect if needed */
-            /* padding: calc(0.5rem + 1px) calc(1rem + 1px) calc(0.5rem - 1px) calc(1rem - 1px); */
         }
 
         .gui-button:disabled {
@@ -121,12 +154,6 @@
         .modal-content h2 {
              @apply text-xl font-semibold text-gray-900 mb-4;
         }
-         .modal-content label {
-            @apply block text-sm font-medium text-gray-700 mb-1;
-        }
-        .modal-content input[type="number"] {
-            @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 mb-3;
-        }
         /* Style for the preview canvas */
         #sprite-sheet-preview-canvas {
             max-width: 100%;
@@ -179,19 +206,19 @@
         <div class="control-panel grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 items-end">
             <div>
                 <label for="grid-cols">Grid Columns:</label>
-                <input type="number" id="grid-cols" value="4" min="1">
+                <input type="number" id="grid-cols" class="gui-input" value="4" min="1">
             </div>
             <div>
                 <label for="grid-rows">Grid Rows:</label>
-                <input type="number" id="grid-rows" value="4" min="1">
+                 <input type="number" id="grid-rows" class="gui-input" value="4" min="1">
             </div>
             <div>
                 <label for="frame-width">Frame Width (px):</label>
-                <input type="number" id="frame-width" value="64" min="1">
+                 <input type="number" id="frame-width" class="gui-input" value="64" min="1">
             </div>
             <div>
                 <label for="frame-height">Frame Height (px):</label>
-                <input type="number" id="frame-height" value="64" min="1">
+                 <input type="number" id="frame-height" class="gui-input" value="64" min="1">
             </div>
             <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
                  <button id="import-frames-button" class="gui-button">
@@ -225,23 +252,25 @@
                  <div class="grid grid-cols-2 gap-4">
                      <div>
                          <label for="import-sheet-cols">Grid Columns:</label>
-                         <input type="number" id="import-sheet-cols" value="4" min="1" step="1">
+                          <input type="number" id="import-sheet-cols" class="gui-input mb-3" value="4" min="1" step="1">
                      </div>
                      <div>
                          <label for="import-sheet-rows">Grid Rows:</label>
-                         <input type="number" id="import-sheet-rows" value="4" min="1" step="1">
+                          <input type="number" id="import-sheet-rows" class="gui-input mb-3" value="4" min="1" step="1">
                      </div>
                      <div>
                          <label for="import-sheet-width">Frame Width (px):</label>
-                         <input type="number" id="import-sheet-width" value="64" min="1" step="1">
+                          <input type="number" id="import-sheet-width" class="gui-input mb-3" value="64" min="1" step="1">
                      </div>
                      <div>
                          <label for="import-sheet-height">Frame Height (px):</label>
-                         <input type="number" id="import-sheet-height" value="64" min="1" step="1">
+                          <input type="number" id="import-sheet-height" class="gui-input mb-3" value="64" min="1" step="1">
                      </div>
                  </div>
                  <div class="mt-6 text-right">
-                      <button id="cancel-import-sheet" class="gui-button">Cancel</button> <button id="load-sheet-button" class="gui-button">Load Sprite Sheet</button> </div>
+                      <button id="cancel-import-sheet" class="gui-button">Cancel</button>
+                      <button id="load-sheet-button" class="gui-button">Load Sprite Sheet</button>
+                 </div>
              </div>
         </div>
 
