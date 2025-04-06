@@ -319,7 +319,7 @@
                      </div>
                  </div>
                  <p class="text-sm font-medium text-gray-700 mb-1">Margins (px):</p>
-                 <div class="grid grid-cols-4 gap-x-4 gap-y-3">
+                 <div class="grid grid-cols-4 gap-x-4 gap-y-3 mb-4">
                     <div>
                         <label for="import-margin-left">Left:</label>
                         <input type="number" id="import-margin-left" class="gui-input" value="0" min="0" step="1">
@@ -335,6 +335,18 @@
                     <div>
                         <label for="import-margin-bottom">Bottom:</label>
                         <input type="number" id="import-margin-bottom" class="gui-input" value="0" min="0" step="1">
+                    </div>
+                 </div>
+                 <p class="text-sm font-medium text-gray-700 mb-1">Target Frame Size (Optional):</p>
+                 <p class="text-xs text-gray-500 mb-2">Leave blank to use original size. Frames will be resampled.</p>
+                 <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <div>
+                        <label for="import-target-width">Target Width (px):</label>
+                        <input type="number" id="import-target-width" class="gui-input" placeholder="Original" min="1" step="1">
+                    </div>
+                    <div>
+                        <label for="import-target-height">Target Height (px):</label>
+                        <input type="number" id="import-target-height" class="gui-input" placeholder="Original" min="1" step="1">
                     </div>
                  </div>
                  <div class="mt-6 text-right">
@@ -410,6 +422,9 @@
         let importMarginTopInput = document.getElementById('import-margin-top');
         let importMarginRightInput = document.getElementById('import-margin-right');
         let importMarginBottomInput = document.getElementById('import-margin-bottom');
+        // NEW: Target Size Inputs
+        let importTargetWidthInput = document.getElementById('import-target-width');
+        let importTargetHeightInput = document.getElementById('import-target-height');
         // Margin Overlays
         const marginOverlayTop = document.getElementById('margin-overlay-top');
         const marginOverlayBottom = document.getElementById('margin-overlay-bottom');
@@ -619,6 +634,9 @@
                     img.onload = () => {
                         const slot = findNextAvailableSlot();
                         if (slot) {
+                            // Resize imported frame if target size is specified (optional, usually done on sheet import)
+                            // For simplicity, we assume individual frames are already the correct size here.
+                            // If resizing is needed here, the logic from handleLoadSpriteSheet would be adapted.
                             placedImages.push({ img: img, row: slot.row, col: slot.col, id: nextImageId++ });
                             imagesSuccessfullyLoaded++; redrawCanvas(); startAnimation();
                         } else { imagesFailedToLoad++; console.warn(`No slot for ${file.name}.`); }
@@ -636,16 +654,10 @@
         // --- Sprite Sheet Import ---
         function handleImportSheetClick() { sheetFileInput.click(); }
 
-        /**
-         * Updates the import sheet modal preview (image, grid, margins).
-         * Recalculates dimensions based on changed input.
-         * @param {string | null} changedInputId - ID of the input that triggered the change.
-         */
         function updateModalPreviewGridAndInputs(changedInputId) {
             if (isUpdatingModalInputs || !sourceSpriteSheetImage?.complete) return;
             isUpdatingModalInputs = true;
 
-            // Read current values
             const currentCols = parseInt(importSheetColsInput.value);
             const currentRows = parseInt(importSheetRowsInput.value);
             const currentWidth = parseInt(importSheetWidthInput.value);
@@ -654,47 +666,38 @@
             const marginTop = parseInt(importMarginTopInput.value) || 0;
             const marginRight = parseInt(importMarginRightInput.value) || 0;
             const marginBottom = parseInt(importMarginBottomInput.value) || 0;
+            // Target size doesn't affect preview grid calculation, only final import
 
             const imgWidth = sourceSpriteSheetImage.width;
             const imgHeight = sourceSpriteSheetImage.height;
-
-            // Calculate effective area after margins
             const effectiveWidth = Math.max(0, imgWidth - marginLeft - marginRight);
             const effectiveHeight = Math.max(0, imgHeight - marginTop - marginBottom);
 
             try {
-                // --- MODIFIED: Recalculate dependent dimensions on ANY input change ---
                  if (changedInputId?.startsWith('import-sheet-') || changedInputId?.startsWith('import-margin-')) {
-                    // Option 1: If cols/rows or margins changed, recalculate width/height
                     if ((changedInputId === 'import-sheet-cols' || changedInputId === 'import-sheet-rows' || changedInputId?.startsWith('import-margin-')) && currentCols > 0 && currentRows > 0 && effectiveWidth > 0 && effectiveHeight > 0) {
                         const newFrameW = Math.floor(effectiveWidth / currentCols);
                         const newFrameH = Math.floor(effectiveHeight / currentRows);
-                        // Only update if the value is valid and different (prevents cursor jumping)
                         if (newFrameW > 0 && !isNaN(newFrameW) && importSheetWidthInput.value !== String(newFrameW)) importSheetWidthInput.value = newFrameW;
-                        else if (newFrameW <= 0 || isNaN(newFrameW)) importSheetWidthInput.value = ''; // Clear if invalid
+                        else if (newFrameW <= 0 || isNaN(newFrameW)) importSheetWidthInput.value = '';
                         if (newFrameH > 0 && !isNaN(newFrameH) && importSheetHeightInput.value !== String(newFrameH)) importSheetHeightInput.value = newFrameH;
-                        else if (newFrameH <= 0 || isNaN(newFrameH)) importSheetHeightInput.value = ''; // Clear if invalid
+                        else if (newFrameH <= 0 || isNaN(newFrameH)) importSheetHeightInput.value = '';
                     }
-                    // Option 2: If width/height changed, recalculate cols/rows
                     else if ((changedInputId === 'import-sheet-width' || changedInputId === 'import-sheet-height') && currentWidth > 0 && currentHeight > 0 && effectiveWidth > 0 && effectiveHeight > 0) {
                         const newCols = Math.floor(effectiveWidth / currentWidth);
                         const newRows = Math.floor(effectiveHeight / currentHeight);
-                        // Only update if the value is valid and different
                         if (newCols > 0 && !isNaN(newCols) && importSheetColsInput.value !== String(newCols)) importSheetColsInput.value = newCols;
-                        else if (newCols <= 0 || isNaN(newCols)) importSheetColsInput.value = ''; // Clear if invalid
+                        else if (newCols <= 0 || isNaN(newCols)) importSheetColsInput.value = '';
                         if (newRows > 0 && !isNaN(newRows) && importSheetRowsInput.value !== String(newRows)) importSheetRowsInput.value = newRows;
-                         else if (newRows <= 0 || isNaN(newRows)) importSheetRowsInput.value = ''; // Clear if invalid
+                         else if (newRows <= 0 || isNaN(newRows)) importSheetRowsInput.value = '';
                     }
                 }
             } catch (e) { console.error("Error during modal dimension recalculation:", e); }
 
-            // --- Redraw Modal Preview Canvas (Image + Margins + Grid) ---
             try {
                 modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height);
-                // Draw the scaled source image
                 modalPreviewCtx.drawImage(sourceSpriteSheetImage, modalPreviewOffsetX, modalPreviewOffsetY, modalPreviewDrawnWidth, modalPreviewDrawnHeight);
 
-                // Draw Margin Overlay
                 const previewMarginLeft = marginLeft * modalPreviewScaleFactor;
                 const previewMarginTop = marginTop * modalPreviewScaleFactor;
                 const previewMarginRight = marginRight * modalPreviewScaleFactor;
@@ -702,25 +705,19 @@
                 const previewEffectiveWidth = effectiveWidth * modalPreviewScaleFactor;
                 const previewEffectiveHeight = effectiveHeight * modalPreviewScaleFactor;
 
-                modalPreviewCtx.fillStyle = 'rgba(100, 100, 100, 0.3)'; // Semi-transparent gray
-                // Top margin
+                modalPreviewCtx.fillStyle = 'rgba(100, 100, 100, 0.3)';
                 modalPreviewCtx.fillRect(modalPreviewOffsetX, modalPreviewOffsetY, modalPreviewDrawnWidth, previewMarginTop);
-                // Bottom margin
-                modalPreviewCtx.fillRect(modalPreviewOffsetX, modalPreviewOffsetY + previewMarginTop + previewEffectiveHeight, modalPreviewDrawnWidth, previewMarginBottom + 1); // +1 to cover potential rounding gaps
-                // Left margin
+                modalPreviewCtx.fillRect(modalPreviewOffsetX, modalPreviewOffsetY + previewMarginTop + previewEffectiveHeight, modalPreviewDrawnWidth, previewMarginBottom + 1);
                 modalPreviewCtx.fillRect(modalPreviewOffsetX, modalPreviewOffsetY + previewMarginTop, previewMarginLeft, previewEffectiveHeight);
-                // Right margin
-                modalPreviewCtx.fillRect(modalPreviewOffsetX + previewMarginLeft + previewEffectiveWidth, modalPreviewOffsetY + previewMarginTop, previewMarginRight + 1, previewEffectiveHeight); // +1
+                modalPreviewCtx.fillRect(modalPreviewOffsetX + previewMarginLeft + previewEffectiveWidth, modalPreviewOffsetY + previewMarginTop, previewMarginRight + 1, previewEffectiveHeight);
 
-                // Draw Grid Overlay (within effective area)
-                // Read potentially updated values
                 const finalCols = parseInt(importSheetColsInput.value);
                 const finalRows = parseInt(importSheetRowsInput.value);
                 const finalFrameW = parseInt(importSheetWidthInput.value);
                 const finalFrameH = parseInt(importSheetHeightInput.value);
 
                 if (isNaN(finalCols) || isNaN(finalRows) || isNaN(finalFrameW) || isNaN(finalFrameH) || finalCols < 1 || finalRows < 1 || finalFrameW <= 0 || finalFrameH <= 0) {
-                   // console.warn("Invalid dimensions for modal preview grid.");
+                    // console.warn("Invalid dimensions for modal preview grid.");
                 } else {
                     const previewGridStartX = modalPreviewOffsetX + previewMarginLeft;
                     const previewGridStartY = modalPreviewOffsetY + previewMarginTop;
@@ -728,12 +725,10 @@
                     const previewFrameH = finalFrameH * modalPreviewScaleFactor;
 
                     modalPreviewCtx.strokeStyle = 'rgba(255, 0, 0, 0.7)'; modalPreviewCtx.lineWidth = 1;
-                    // Draw vertical grid lines
                     for (let i = 1; i < finalCols; i++) {
                         const x = previewGridStartX + i * previewFrameW;
                         modalPreviewCtx.beginPath(); modalPreviewCtx.moveTo(x, previewGridStartY); modalPreviewCtx.lineTo(x, previewGridStartY + previewEffectiveHeight); modalPreviewCtx.stroke();
                     }
-                    // Draw horizontal grid lines
                     for (let i = 1; i < finalRows; i++) {
                         const y = previewGridStartY + i * previewFrameH;
                         modalPreviewCtx.beginPath(); modalPreviewCtx.moveTo(previewGridStartX, y); modalPreviewCtx.lineTo(previewGridStartX + previewEffectiveWidth, y); modalPreviewCtx.stroke();
@@ -758,11 +753,11 @@
                     modalPreviewCanvas.height = modalPreviewDrawnHeight > 0 ? modalPreviewDrawnHeight : maxHeight;
                     modalPreviewOffsetX = (modalPreviewCanvas.width - modalPreviewDrawnWidth) / 2; modalPreviewOffsetY = (modalPreviewCanvas.height - modalPreviewDrawnHeight) / 2;
 
-                    // Reset margins and guess dimensions
+                    // Reset margins, target sizes and guess dimensions
                     importMarginLeftInput.value = 0; importMarginTopInput.value = 0;
                     importMarginRightInput.value = 0; importMarginBottomInput.value = 0;
-                    const effectiveWidth = imgWidth; // Initially use full width for guessing
-                    const effectiveHeight = imgHeight; // Initially use full height
+                    importTargetWidthInput.value = ''; importTargetHeightInput.value = ''; // Clear target size
+                    const effectiveWidth = imgWidth; const effectiveHeight = imgHeight;
                     const aspect = effectiveWidth / effectiveHeight; let guessCols = 4, guessRows = 4;
                     if (aspect > 1.5 && effectiveHeight > 0) { guessCols = 8; guessRows = Math.max(1, Math.round(8 / aspect)); } else if (aspect < 0.6 && effectiveWidth > 0) { guessRows = 8; guessCols = Math.max(1, Math.round(8 * aspect)); }
                     let guessFrameW = (guessCols > 0) ? Math.floor(effectiveWidth / guessCols) : effectiveWidth; let guessFrameH = (guessRows > 0) ? Math.floor(effectiveHeight / guessRows) : effectiveHeight;
@@ -770,7 +765,7 @@
                     if (guessCols <= 0) guessCols = Math.max(1, Math.floor(effectiveWidth / guessFrameW)); if (guessRows <= 0) guessRows = Math.max(1, Math.floor(effectiveHeight / guessFrameH));
                     importSheetColsInput.value = guessCols; importSheetRowsInput.value = guessRows; importSheetWidthInput.value = guessFrameW; importSheetHeightInput.value = guessFrameH;
 
-                    // --- Re-attach Event Listeners (Including Margins) ---
+                    // --- Re-attach Event Listeners (Including Margins & Target Size) ---
                     const inputsToClone = [
                         { current: importSheetColsInput, id: 'import-sheet-cols' },
                         { current: importSheetRowsInput, id: 'import-sheet-rows' },
@@ -779,7 +774,9 @@
                         { current: importMarginLeftInput, id: 'import-margin-left' },
                         { current: importMarginTopInput, id: 'import-margin-top' },
                         { current: importMarginRightInput, id: 'import-margin-right' },
-                        { current: importMarginBottomInput, id: 'import-margin-bottom' }
+                        { current: importMarginBottomInput, id: 'import-margin-bottom' },
+                        { current: importTargetWidthInput, id: 'import-target-width' }, // NEW
+                        { current: importTargetHeightInput, id: 'import-target-height' } // NEW
                     ];
                     inputsToClone.forEach(item => {
                         const newNode = item.current.cloneNode(true);
@@ -793,8 +790,13 @@
                         else if (item.id === 'import-margin-top') importMarginTopInput = newNode;
                         else if (item.id === 'import-margin-right') importMarginRightInput = newNode;
                         else if (item.id === 'import-margin-bottom') importMarginBottomInput = newNode;
-                        // Add listener to the new node
-                        newNode.addEventListener('input', () => updateModalPreviewGridAndInputs(item.id));
+                        else if (item.id === 'import-target-width') importTargetWidthInput = newNode; // NEW
+                        else if (item.id === 'import-target-height') importTargetHeightInput = newNode; // NEW
+
+                        // Add listener to the new node (only grid/margin inputs need to update preview)
+                        if (!item.id.startsWith('import-target-')) {
+                             newNode.addEventListener('input', () => updateModalPreviewGridAndInputs(item.id));
+                        }
                     });
                     // --- End Re-attaching Listeners ---
 
@@ -811,12 +813,12 @@
             importSheetModal.classList.add('hidden'); sourceSpriteSheetImage = null;
             modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height);
             // Clone/replace inputs to remove listeners
-            const inputsToClean = [importSheetColsInput, importSheetRowsInput, importSheetWidthInput, importSheetHeightInput, importMarginLeftInput, importMarginTopInput, importMarginRightInput, importMarginBottomInput];
+            const inputsToClean = [importSheetColsInput, importSheetRowsInput, importSheetWidthInput, importSheetHeightInput, importMarginLeftInput, importMarginTopInput, importMarginRightInput, importMarginBottomInput, importTargetWidthInput, importTargetHeightInput]; // Added target inputs
             inputsToClean.forEach(input => {
                 if (input && input.parentNode) {
                     const cleanNode = input.cloneNode(true);
                     input.parentNode.replaceChild(cleanNode, input);
-                    // Update outer scope reference - needed if user cancels then re-imports
+                    // Update outer scope reference
                     if (input.id === 'import-sheet-cols') importSheetColsInput = cleanNode;
                     else if (input.id === 'import-sheet-rows') importSheetRowsInput = cleanNode;
                     else if (input.id === 'import-sheet-width') importSheetWidthInput = cleanNode;
@@ -825,55 +827,56 @@
                     else if (input.id === 'import-margin-top') importMarginTopInput = cleanNode;
                     else if (input.id === 'import-margin-right') importMarginRightInput = cleanNode;
                     else if (input.id === 'import-margin-bottom') importMarginBottomInput = cleanNode;
+                    else if (input.id === 'import-target-width') importTargetWidthInput = cleanNode; // NEW
+                    else if (input.id === 'import-target-height') importTargetHeightInput = cleanNode; // NEW
                 }
             });
         }
         /**
-         * Handles the click event for the "Load Sprite Sheet" button in the modal.
-         * Validates dimensions, updates the main editor's settings, clears existing frames,
-         * slices the source image into individual frames (respecting margins), and populates the main canvas.
+         * Handles loading the sheet: validates inputs, slices frames respecting margins,
+         * resamples frames if target size is specified, and updates the main editor.
          */
         function handleLoadSpriteSheet() {
             // Read values from modal
             const importCols = parseInt(importSheetColsInput.value);
             const importRows = parseInt(importSheetRowsInput.value);
-            const importFrameW = parseInt(importSheetWidthInput.value);
-            const importFrameH = parseInt(importSheetHeightInput.value);
+            const importFrameW = parseInt(importSheetWidthInput.value); // Original frame width from grid calc
+            const importFrameH = parseInt(importSheetHeightInput.value); // Original frame height from grid calc
             const marginLeft = parseInt(importMarginLeftInput.value) || 0;
             const marginTop = parseInt(importMarginTopInput.value) || 0;
             const marginRight = parseInt(importMarginRightInput.value) || 0;
             const marginBottom = parseInt(importMarginBottomInput.value) || 0;
+            // Read target dimensions, default to original calculated size if empty or invalid
+            let targetWidth = parseInt(importTargetWidthInput.value);
+            let targetHeight = parseInt(importTargetHeightInput.value);
+            targetWidth = (!isNaN(targetWidth) && targetWidth > 0) ? targetWidth : importFrameW;
+            targetHeight = (!isNaN(targetHeight) && targetHeight > 0) ? targetHeight : importFrameH;
+
 
             // Validate basic inputs
-            if (isNaN(importCols) || isNaN(importRows) || isNaN(importFrameW) || isNaN(importFrameH) || importCols < 1 || importRows < 1 || importFrameW < 1 || importFrameH < 1) {
-                 showMessage("Invalid dimensions.", 4000); return;
-            }
-            if (marginLeft < 0 || marginTop < 0 || marginRight < 0 || marginBottom < 0) {
-                 showMessage("Margins cannot be negative.", 4000); return;
-            }
-            if (!sourceSpriteSheetImage?.complete) {
-                 showMessage("Error: Source image missing.", 4000); return;
-            }
+            if (isNaN(importCols) || isNaN(importRows) || isNaN(importFrameW) || isNaN(importFrameH) || importCols < 1 || importRows < 1 || importFrameW < 1 || importFrameH < 1) { showMessage("Invalid dimensions calculated.", 4000); return; }
+            if (marginLeft < 0 || marginTop < 0 || marginRight < 0 || marginBottom < 0) { showMessage("Margins cannot be negative.", 4000); return; }
+             if (targetWidth <=0 || targetHeight <= 0) { showMessage("Target dimensions must be positive.", 4000); return; }
+            if (!sourceSpriteSheetImage?.complete) { showMessage("Error: Source image missing.", 4000); return; }
 
             // Calculate effective area and validate against image size
             const effectiveWidth = sourceSpriteSheetImage.width - marginLeft - marginRight;
             const effectiveHeight = sourceSpriteSheetImage.height - marginTop - marginBottom;
-            if (effectiveWidth <= 0 || effectiveHeight <= 0) {
-                 showMessage("Margins are larger than the image dimensions.", 4000); return;
-            }
+            if (effectiveWidth <= 0 || effectiveHeight <= 0) { showMessage("Margins are larger than the image dimensions.", 4000); return; }
             // Check if grid dimensions exceed the effective area (allow 1px tolerance for rounding)
             if (importCols * importFrameW > effectiveWidth + 1 || importRows * importFrameH > effectiveHeight + 1) {
-                 if (!confirm(`Warning: Grid dimensions (${importCols}x${importRows} frames of ${importFrameW}x${importFrameH}px) might exceed the effective area (${effectiveWidth}x${effectiveHeight}px) within margins. Continue anyway?`)) {
-                     return; // User cancelled confirm dialog
-                 }
+                 if (!confirm(`Warning: Calculated grid dimensions (${importCols}x${importRows} frames of ${importFrameW}x${importFrameH}px) might exceed the effective area (${effectiveWidth}x${effectiveHeight}px) within margins. This might result in fewer frames being loaded. Continue anyway?`)) { return; }
             }
 
-            console.log(`Loading: ${importCols}x${importRows} frames, ${importFrameW}x${importFrameH}px. Margins(L,T,R,B): ${marginLeft},${marginTop},${marginRight},${marginBottom}`);
-            showMessage("Processing sheet, please wait...", 10000);
+            console.log(`Loading: ${importCols}x${importRows} frames, original size ${importFrameW}x${importFrameH}px, target size ${targetWidth}x${targetHeight}px. Margins(L,T,R,B): ${marginLeft},${marginTop},${marginRight},${marginBottom}`);
+            showMessage("Processing sheet (slicing and resampling)...", 15000); // Longer message
 
-            // Update main editor state
-            gridColsInput.value = importCols; gridRowsInput.value = importRows; frameWidthInput.value = importFrameW; frameHeightInput.value = importFrameH;
-            handleSizeChange(); // Update main state, canvas size etc.
+            // Update main editor state using TARGET dimensions
+            gridColsInput.value = importCols;
+            gridRowsInput.value = importRows;
+            frameWidthInput.value = targetWidth; // Use target width
+            frameHeightInput.value = targetHeight; // Use target height
+            handleSizeChange(); // Update main state, canvas size etc. using TARGET size
 
             // Clear current frames
             placedImages = []; nextImageId = 0; selectedFrameId = null;
@@ -881,28 +884,49 @@
             const promises = [];
             for (let r = 0; r < importRows; r++) {
                 for (let c = 0; c < importCols; c++) {
-                    // Calculate source coordinates *within the original image*, applying margins
                     const sx = marginLeft + c * importFrameW;
                     const sy = marginTop + r * importFrameH;
 
-                    // Basic check to ensure source rect is within image bounds (though drawImage clips)
                     if (sx < 0 || sy < 0 || sx + importFrameW > sourceSpriteSheetImage.width || sy + importFrameH > sourceSpriteSheetImage.height) {
-                         console.warn(`Skipping frame at [${r},${c}]: Calculated source rect [${sx},${sy},${importFrameW},${importFrameH}] extends beyond source image bounds [${sourceSpriteSheetImage.width},${sourceSpriteSheetImage.height}].`);
+                         console.warn(`Skipping frame at [${r},${c}]: Source rect extends beyond source image bounds.`);
                          continue;
                     }
 
                     const framePromise = new Promise((resolve, reject) => {
-                        const frameCanvas = document.createElement('canvas');
+                        const frameCanvas = document.createElement('canvas'); // Canvas for original slice
                         frameCanvas.width = importFrameW; frameCanvas.height = importFrameH;
                         const frameCtx = frameCanvas.getContext('2d');
                         try {
-                            // Extract the frame from the source image using calculated sx, sy
+                            // 1. Extract the original frame portion
                             frameCtx.drawImage(sourceSpriteSheetImage, sx, sy, importFrameW, importFrameH, 0, 0, importFrameW, importFrameH);
+
+                            // 2. Determine if resizing is needed
+                            const needsResize = (targetWidth !== importFrameW || targetHeight !== importFrameH);
+                            let finalCanvas = frameCanvas; // Default to original canvas
+
+                            if (needsResize) {
+                                // 3. Create canvas for resized frame
+                                const resizedFrameCanvas = document.createElement('canvas');
+                                resizedFrameCanvas.width = targetWidth;
+                                resizedFrameCanvas.height = targetHeight;
+                                const resizedCtx = resizedFrameCanvas.getContext('2d');
+
+                                // 4. Set smoothing for better anti-aliasing
+                                resizedCtx.imageSmoothingEnabled = true;
+                                resizedCtx.imageSmoothingQuality = 'high';
+
+                                // 5. Draw (resample) from original slice canvas to resized canvas
+                                resizedCtx.drawImage(frameCanvas, 0, 0, importFrameW, importFrameH, 0, 0, targetWidth, targetHeight);
+                                finalCanvas = resizedFrameCanvas; // Use the resized canvas for the final image
+                            }
+
+                            // 6. Create Image object from the final canvas (original or resized)
                             const frameImg = new Image();
                             frameImg.onload = () => resolve({ img: frameImg, row: r, col: c }); // Store with target grid row/col
                             frameImg.onerror = (err) => { console.error(`Err load frame [${r}, ${c}]`, err); reject(`Failed load ${r}-${c}`); };
-                            frameImg.src = frameCanvas.toDataURL('image/png');
-                        } catch (e) { console.error(`Err draw frame [${r}, ${c}]`, e); reject(`Failed draw ${r}-${c}`); }
+                            frameImg.src = finalCanvas.toDataURL('image/png'); // Get data URL from final canvas
+
+                        } catch (e) { console.error(`Err draw/resize frame [${r}, ${c}]`, e); reject(`Failed draw/resize ${r}-${c}`); }
                     });
                     promises.push(framePromise);
                 }
@@ -911,18 +935,17 @@
                 .then((loadedFramesData) => {
                      placedImages = loadedFramesData.map(data => ({ img: data.img, row: data.row, col: data.col, id: nextImageId++ }));
                      console.log("Frames processed and placedImages updated.");
-                     redrawCanvas();
-                     startAnimation();
-                     showMessage(`Sheet loaded! ${loadedFramesData.length} frames created.`, 4000);
+                     redrawCanvas(); // Redraw main canvas (now uses target size)
+                     startAnimation(); // Restart animation
+                     showMessage(`Sheet loaded! ${loadedFramesData.length} frames created (resampled to ${targetWidth}x${targetHeight}px).`, 5000);
                  })
                 .catch((error) => {
                      console.error("Error processing frames from promise:", error);
                      showMessage(`Error loading sheet: ${error}.`, 5000);
-                     redrawCanvas(); // Still attempt redraw even on error
-                     startAnimation();
+                     redrawCanvas(); startAnimation(); // Still attempt redraw/animate
                  })
                 .finally(() => {
-                     handleCancelImportSheet(); // Close modal regardless of success/failure
+                     handleCancelImportSheet(); // Close modal
                  });
         }
 
@@ -946,7 +969,9 @@
              const fullFilename = filename.toLowerCase().endsWith('.png') ? filename : filename + '.png';
              const tempCanvas = document.createElement('canvas');
              try {
-                 const requiredWidth = gridCols * frameWidth; const requiredHeight = gridRows * frameHeight;
+                 // Use current gridCols/frameWidth which reflect loaded state (potentially target size)
+                 const requiredWidth = gridCols * frameWidth;
+                 const requiredHeight = gridRows * frameHeight;
                  if (requiredWidth <= 0 || requiredHeight <= 0) { showMessage("Cannot save: Invalid dimensions."); return; }
                  tempCanvas.width = requiredWidth; tempCanvas.height = requiredHeight;
                  const tempCtx = tempCanvas.getContext('2d'); let imagesDrawn = 0;
@@ -966,7 +991,9 @@
                 for (let r = 0; r <= maxRow; r++) {
                     const rowFrames = placedImages.filter(item => item.row === r).sort((a, b) => a.col - b.col);
                     if (rowFrames.length === 0) continue;
-                    const rowSheetWidth = rowFrames.length * frameWidth; const rowSheetHeight = frameHeight;
+                     // Use current frameWidth/Height which reflect loaded state (target size)
+                    const rowSheetWidth = rowFrames.length * frameWidth;
+                    const rowSheetHeight = frameHeight;
                     if (rowSheetWidth <= 0 || rowSheetHeight <= 0) { console.warn(`Skip row ${r}: Invalid dimensions.`); continue; }
                     const tempCanvas = document.createElement('canvas'); tempCanvas.width = rowSheetWidth; tempCanvas.height = rowSheetHeight;
                     const tempCtx = tempCanvas.getContext('2d'); let imagesDrawnThisRow = 0;
