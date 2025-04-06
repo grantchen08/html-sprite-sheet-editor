@@ -15,13 +15,11 @@
             cursor: default; /* Default cursor, change on hover/drag */
             touch-action: none; /* Prevent default touch actions like scrolling */
             background-color: #f9fafb; /* Add a light background */
+            display: block; /* Prevent extra space */
         }
-        .frame-image:hover {
-             cursor: grab;
-        }
-        canvas:active {
-            /* cursor: grabbing; */ /* Set dynamically in JS */
-        }
+        /* Removed hover rule, handled by JS */
+        /* canvas:active { cursor: grabbing; } Set dynamically in JS */
+
         .control-panel label,
         .modal-content label,
         #animation-preview-container label { /* Apply label style */
@@ -44,8 +42,9 @@
             border-right-color: #e5e7eb; /* gray-200 */
             border-radius: 0.25rem; /* rounded */
             transition: border-color 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+            /* Spinners restored (no hiding rules) */
         }
-        /* Removed spinner hiding rules */
+
 
         /* Custom focus style for inputs */
          .gui-input:focus {
@@ -97,6 +96,7 @@
         /* Ensure icons align vertically */
          .gui-button .lucide {
              vertical-align: middle;
+             margin-right: 0.3em; /* Slightly less margin */
          }
          /* Keep margin for modal secondary button */
          .modal-content button#cancel-import-sheet {
@@ -149,7 +149,8 @@
         }
         /* Use Tailwind for modal inputs for simplicity */
         .modal-content input[type="number"] {
-             @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 mb-3;
+            /* Using custom style now */
+             /* @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 mb-3; */
         }
         /* Style for the preview canvas */
         #sprite-sheet-preview-canvas {
@@ -169,11 +170,17 @@
             box-shadow: 0 0 0 2px white; /* Inner white glow for contrast */
             pointer-events: none; /* Don't interfere with clicks */
             z-index: 10; /* Above images */
+            /* display: none; */ /* <-- REMOVED THIS LINE */
+            /* Element is visible by default, hidden using the '.hidden' class */
         }
+        /* Removed redundant .hidden rule */
+        /* .selected-frame-highlight.hidden { display: none; } */
+
 
         /* Animation Preview Styles */
         #animation-preview-container {
-            @apply mt-6 pt-4 border-t border-gray-200; /* Add separator */
+            /* Removed top border, now part of the side-by-side layout */
+            /* @apply mt-6 pt-4 border-t border-gray-200; */
         }
         #animation-preview-canvas {
             border: 1px solid #d1d5db; /* gray-300 */
@@ -182,10 +189,14 @@
             margin-left: auto; /* Center */
             margin-right: auto;
             margin-top: 0.5rem; /* Space below label */
+            /* Set initial size, will be updated by JS */
+            width: 64px;
+            height: 64px;
         }
 
     </style>
     <style>
+      /* Lucide Icon Font Setup */
       @font-face {
         font-family: 'LucideIcons';
         src: url(https://cdn.jsdelivr.net/npm/lucide-static@latest/font/Lucide.ttf) format('truetype');
@@ -200,17 +211,17 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         display: inline-block; /* Ensure proper alignment */
-        margin-right: 0.5em; /* Space between icon and text */
       }
-      .lucide-upload::before { content: "\e90b"; } /* upload icon */
-      .lucide-save::before { content: "\e8b4"; } /* save icon */
-      .lucide-file-image::before { content: "\e9f0"; } /* file-image icon */
-      .lucide-trash-2::before { content: "\e8ed"; } /* trash-2 icon */
+      /* Map icon names to their Unicode characters */
+      .lucide-upload::before { content: "\ef1b"; } /* upload icon */
+      .lucide-save::before { content: "\ee9f"; }   /* save icon */
+      .lucide-file-image::before { content: "\edc8"; } /* file-image icon */
+      .lucide-trash-2::before { content: "\ef0b"; } /* trash-2 icon */
     </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
 
-    <div class="container mx-auto max-w-4xl bg-white p-6 rounded-lg shadow-md">
+    <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
         <h1 class="text-2xl font-semibold text-gray-900 mb-6 text-center">Sprite Sheet Editor</h1>
 
         <div class="control-panel grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 items-end">
@@ -248,16 +259,26 @@
         <input type="file" id="frame-file-input" multiple accept="image/*" class="hidden">
         <input type="file" id="sheet-file-input" accept="image/*" class="hidden">
 
-        <div id="canvas-container" class="relative w-full overflow-auto border border-gray-300 rounded-md bg-gray-50" style="max-height: 60vh;">
-             <canvas id="sprite-canvas" class="block rounded-md"></canvas>
-             </div>
+        <div class="flex flex-col md:flex-row gap-6 mt-6">
 
-        <div id="animation-preview-container">
-            <label for="animation-preview-canvas" class="text-center block">Animation Preview</label>
-            <canvas id="animation-preview-canvas"></canvas>
+            <div id="canvas-container-wrapper" class="flex-grow md:w-3/4 border border-gray-200 rounded-md p-3 bg-gray-50">
+                 <p class="text-sm font-medium text-gray-700 mb-2 text-center">Sprite Sheet Canvas</p>
+                 <div id="canvas-container" class="relative w-full overflow-auto border border-gray-300 rounded-md bg-gray-50">
+                    <canvas id="sprite-canvas"></canvas>
+                    <div id="selection-highlight" class="selected-frame-highlight hidden"></div> </div>
             </div>
 
-        <div id="message-box"></div>
+
+            <div id="animation-preview-container" class="md:w-1/4 border border-gray-200 rounded-md p-3 bg-gray-50 flex flex-col items-center">
+                <label for="animation-preview-canvas" class="text-center block font-medium">Animation Preview</label>
+                <canvas id="animation-preview-canvas" class="mt-2"></canvas>
+                 <div class="mt-4 text-center">
+                    <label for="animation-fps" class="text-sm text-gray-600 mr-2">FPS:</label>
+                    <input type="number" id="animation-fps" class="gui-input inline-block w-16 text-center" value="10" min="1" max="60">
+                </div>
+            </div>
+
+        </div> <div id="message-box"></div>
 
         <div id="import-sheet-modal" class="modal-overlay hidden">
              <div class="modal-content">
@@ -289,12 +310,10 @@
              </div>
         </div>
 
-    </div>
-
-    <script>
+    </div> <script>
         // --- DOM Elements ---
         const canvas = document.getElementById('sprite-canvas');
-        const canvasContainer = document.getElementById('canvas-container');
+        const canvasContainer = document.getElementById('canvas-container'); // Inner container for scrolling/positioning
         const ctx = canvas.getContext('2d');
         const gridColsInput = document.getElementById('grid-cols');
         const gridRowsInput = document.getElementById('grid-rows');
@@ -308,18 +327,22 @@
         const sheetFileInput = document.getElementById('sheet-file-input');
         const messageBox = document.getElementById('message-box');
         const importSheetModal = document.getElementById('import-sheet-modal');
+        const selectionHighlight = document.getElementById('selection-highlight'); // Reference the highlight div
+
         // Modal specific elements
-        const modalPreviewCanvas = document.getElementById('sprite-sheet-preview-canvas'); // Renamed for clarity
+        const modalPreviewCanvas = document.getElementById('sprite-sheet-preview-canvas');
         const modalPreviewCtx = modalPreviewCanvas.getContext('2d');
-        let importSheetColsInput = document.getElementById('import-sheet-cols');
+        let importSheetColsInput = document.getElementById('import-sheet-cols'); // Use 'let' as these might be replaced
         let importSheetRowsInput = document.getElementById('import-sheet-rows');
         let importSheetWidthInput = document.getElementById('import-sheet-width');
         let importSheetHeightInput = document.getElementById('import-sheet-height');
         const cancelImportSheetButton = document.getElementById('cancel-import-sheet');
         const loadSheetButton = document.getElementById('load-sheet-button');
+
         // Animation Preview elements
         const animationPreviewCanvas = document.getElementById('animation-preview-canvas');
         const animationPreviewCtx = animationPreviewCanvas.getContext('2d');
+        const animationFpsInput = document.getElementById('animation-fps'); // Added FPS input reference
 
 
         // --- State Variables ---
@@ -327,442 +350,955 @@
         let gridRows = parseInt(gridRowsInput.value);
         let frameWidth = parseInt(frameWidthInput.value);
         let frameHeight = parseInt(frameHeightInput.value);
-        let placedImages = [];
-        let nextImageId = 0;
-        let selectedFrameId = null;
-        let sourceSpriteSheetImage = null;
+        let placedImages = []; // Array to store { img, row, col, id } objects
+        let nextImageId = 0;   // Simple counter for unique IDs
+        let selectedFrameId = null; // ID of the currently selected frame
+        let sourceSpriteSheetImage = null; // Holds the image loaded for the import sheet modal
+
         // Modal Preview canvas state
-        let modalPreviewScaleFactor = 1;
-        let modalPreviewOffsetX = 0;
-        let modalPreviewOffsetY = 0;
-        let modalPreviewDrawnWidth = 0;
-        let modalPreviewDrawnHeight = 0;
-        let isUpdatingInputs = false;
+        let modalPreviewScaleFactor = 1; // How much the preview image is scaled down
+        let modalPreviewOffsetX = 0;     // X offset for centering preview image
+        let modalPreviewOffsetY = 0;     // Y offset for centering preview image
+        let modalPreviewDrawnWidth = 0;  // Actual width the preview image is drawn at
+        let modalPreviewDrawnHeight = 0; // Actual height the preview image is drawn at
+        let isUpdatingModalInputs = false; // Flag to prevent infinite loops when updating modal inputs (Changed name)
+
         // Animation state
-        let animationIntervalId = null;
-        let currentAnimationFrameIndex = 0;
-        let animationFps = 10; // Frames per second
-        let framesToAnimate = [];
+        let animationIntervalId = null;       // ID for the animation timer
+        let currentAnimationFrameIndex = 0; // Index of the frame being shown in the animation
+        let animationFps = parseInt(animationFpsInput.value); // Frames per second for the preview
+        let framesToAnimate = [];           // Array of image objects currently being animated
 
 
         // --- Drag and Drop State ---
-        let isDragging = false;
-        let dragMoved = false;
-        let draggedImage = null;
-        let startX, startY;
-        let dragStartX, dragStartY;
-        let offsetX, offsetY;
+        let isDragging = false;      // Is an image currently being dragged?
+        let dragMoved = false;       // Has the mouse moved enough to initiate a drag?
+        let draggedImage = null;     // The image object being dragged
+        let dragStartCanvasX, dragStartCanvasY; // Initial mouse position on canvas when drag starts
+        let dragStartClientX, dragStartClientY; // Initial mouse position relative to viewport
+        let dragOffsetX, dragOffsetY; // Offset between mouse click and top-left corner of the image
+
 
         // --- Utility Functions ---
+
+        /**
+         * Displays a message in the message box for a specified duration.
+         * @param {string} message - The text message to display.
+         * @param {number} [duration=3000] - How long to display the message in milliseconds.
+         */
         function showMessage(message, duration = 3000) {
             messageBox.textContent = message;
             messageBox.style.display = 'block';
+            // Clear any previous timeout
             if (messageBox.timeoutId) clearTimeout(messageBox.timeoutId);
+            // Set a new timeout to hide the message
             messageBox.timeoutId = setTimeout(() => {
                 messageBox.style.display = 'none';
-                messageBox.timeoutId = null;
+                messageBox.timeoutId = null; // Clear the stored ID
             }, duration);
         }
 
         // --- Selection Highlight ---
-        let selectionHighlight = null;
-        function createSelectionHighlight() {
-            if (!selectionHighlight) {
-                selectionHighlight = document.createElement('div');
-                selectionHighlight.className = 'selected-frame-highlight hidden';
-                canvasContainer.appendChild(selectionHighlight);
-            }
-        }
+        // No changes needed in createSelectionHighlight itself
+
+        /**
+         * Updates the position and visibility of the selection highlight element
+         * based on the currently selected frame. Also enables/disables the delete button.
+         */
         function updateSelectionHighlight() {
-            if (!selectionHighlight) createSelectionHighlight();
+            // Ensure highlight exists
+             if (!selectionHighlight) {
+                 console.error("Selection highlight element not found in DOM.");
+                 return;
+             }
+             // console.log('Updating highlight, selected ID:', selectedFrameId); // DEBUG
+
             if (selectedFrameId !== null) {
                 const selectedItem = placedImages.find(item => item.id === selectedFrameId);
+                 // console.log('Selected item:', selectedItem); // DEBUG
                 if (selectedItem) {
+                    // Position the highlight over the selected frame
                     selectionHighlight.style.left = `${selectedItem.col * frameWidth}px`;
                     selectionHighlight.style.top = `${selectedItem.row * frameHeight}px`;
                     selectionHighlight.style.width = `${frameWidth}px`;
                     selectionHighlight.style.height = `${frameHeight}px`;
-                    selectionHighlight.classList.remove('hidden');
-                    deleteFrameButton.disabled = false; return;
+                    // console.log('Highlight styles applied:', selectionHighlight.style.left, selectionHighlight.style.top, selectionHighlight.style.width, selectionHighlight.style.height); // DEBUG
+                    selectionHighlight.classList.remove('hidden'); // Make it visible
+                    // console.log('Highlight hidden class removed'); // DEBUG
+                    deleteFrameButton.disabled = false; // Enable delete button
+                    return; // Exit early
+                } else {
+                    console.warn("Selected frame ID not found, deselecting.");
+                    selectedFrameId = null;
                 }
             }
+            // Hide highlight and disable delete button if no frame is selected or found
+            // console.log('Adding hidden class to highlight'); // DEBUG
             selectionHighlight.classList.add('hidden');
             deleteFrameButton.disabled = true;
         }
 
         // --- Canvas Drawing ---
+
+        /**
+         * Clears the main canvas and draws the grid lines based on current settings.
+         */
         function drawGrid() {
              try {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-                for (let i = 0; i <= gridCols; i++) {
-                    ctx.beginPath(); ctx.moveTo(i * frameWidth, 0); ctx.lineTo(i * frameWidth, canvas.height); ctx.stroke();
-                }
-                for (let i = 0; i <= gridRows; i++) {
-                    ctx.beginPath(); ctx.moveTo(0, i * frameHeight); ctx.lineTo(canvas.width, i * frameHeight); ctx.stroke();
-                }
-            } catch (e) { console.error("Error drawing grid:", e); showMessage("Error rendering grid.", 5000); }
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 ctx.strokeStyle = '#e5e7eb'; // Light gray grid lines
+                 ctx.lineWidth = 1;
+
+                 // Draw vertical lines
+                 for (let i = 0; i <= gridCols; i++) {
+                     const x = i * frameWidth;
+                     ctx.beginPath();
+                     ctx.moveTo(x, 0);
+                     ctx.lineTo(x, canvas.height);
+                     ctx.stroke();
+                 }
+                 // Draw horizontal lines
+                 for (let i = 0; i <= gridRows; i++) {
+                     const y = i * frameHeight;
+                     ctx.beginPath();
+                     ctx.moveTo(0, y);
+                     ctx.lineTo(canvas.width, y);
+                     ctx.stroke();
+                 }
+             } catch (e) {
+                 console.error("Error drawing grid:", e);
+                 showMessage("Error rendering grid.", 5000);
+             }
         }
 
+        /**
+         * Draws all placed images onto the main canvas.
+         * Also handles drawing the semi-transparent dragged image if dragging is active.
+         */
         function drawImages() {
              try {
-                canvas.style.cursor = 'default';
-                placedImages.forEach(item => {
-                    const drawX = item.col * frameWidth; const drawY = item.row * frameHeight;
-                    if (item && item.img && item.img.complete) {
-                        if (!isDragging || item.id !== draggedImage?.id) {
-                            ctx.drawImage(item.img, drawX, drawY, frameWidth, frameHeight);
-                        }
-                    } else if (item && item.img && !item.img.complete) {
-                        ctx.fillStyle = '#f3f4f6'; ctx.fillRect(drawX + 2, drawY + 2, frameWidth - 4, frameHeight - 4);
-                        ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                        ctx.fillText('Loading...', drawX + frameWidth / 2, drawY + frameHeight / 2);
-                    }
-                });
-                if (isDragging && draggedImage && draggedImage.img && draggedImage.img.complete) {
-                    ctx.globalAlpha = 0.6;
-                    ctx.drawImage(draggedImage.img, startX - offsetX, startY - offsetY, frameWidth, frameHeight);
-                    ctx.globalAlpha = 1.0; canvas.style.cursor = 'grabbing';
-                }
-             } catch (e) { console.error("Error drawing images:", e); showMessage("Error rendering images.", 5000); if (isDragging) { isDragging = false; draggedImage = null; canvas.style.cursor = 'default'; } }
+                 canvas.style.cursor = 'default'; // Reset cursor
+
+                 // Draw all placed images (except the one being dragged)
+                 placedImages.forEach(item => {
+                     const drawX = item.col * frameWidth;
+                     const drawY = item.row * frameHeight;
+
+                     if (item && item.img && item.img.complete) {
+                         // Only draw if it's not the image currently being dragged
+                         if (!isDragging || item.id !== draggedImage?.id) {
+                             ctx.drawImage(item.img, drawX, drawY, frameWidth, frameHeight);
+                         }
+                     } else if (item && item.img && !item.img.complete) {
+                         // Draw a placeholder if the image hasn't loaded yet
+                         ctx.fillStyle = '#f3f4f6'; // gray-100
+                         ctx.fillRect(drawX + 2, drawY + 2, frameWidth - 4, frameHeight - 4);
+                         ctx.fillStyle = '#9ca3af'; // gray-400
+                         ctx.textAlign = 'center';
+                         ctx.textBaseline = 'middle';
+                         ctx.font = '12px Inter';
+                         ctx.fillText('Loading...', drawX + frameWidth / 2, drawY + frameHeight / 2);
+                     }
+                 });
+
+                 // If currently dragging an image, draw it semi-transparently at the mouse position
+                 if (isDragging && draggedImage && draggedImage.img && draggedImage.img.complete) {
+                     ctx.globalAlpha = 0.6; // Make it semi-transparent
+                     // Draw at current mouse position adjusted by the initial click offset
+                     ctx.drawImage(draggedImage.img, dragStartCanvasX - dragOffsetX, dragStartCanvasY - dragOffsetY, frameWidth, frameHeight);
+                     ctx.globalAlpha = 1.0; // Reset transparency
+                     canvas.style.cursor = 'grabbing'; // Set grabbing cursor
+                 }
+             } catch (e) {
+                 console.error("Error drawing images:", e);
+                 showMessage("Error rendering images.", 5000);
+                 // Reset drag state if an error occurs during drawing
+                 if (isDragging) {
+                     isDragging = false;
+                     draggedImage = null;
+                     canvas.style.cursor = 'default';
+                 }
+             }
         }
 
+        /**
+         * Resizes the main canvas and animation preview canvas based on grid/frame settings,
+         * then redraws the grid and images.
+         */
         function redrawCanvas() {
              try {
-                const newCanvasWidth = gridCols * frameWidth; const newCanvasHeight = gridRows * frameHeight;
-                if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) {
-                    console.warn("Skipping redraw: invalid dimensions", newCanvasWidth, newCanvasHeight);
-                    if (canvas.width > 0 && canvas.height > 0) ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 // Calculate new canvas dimensions
+                 const newCanvasWidth = gridCols * frameWidth;
+                 const newCanvasHeight = gridRows * frameHeight;
+
+                 // Basic validation for dimensions
+                 if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) {
+                     console.warn("Skipping redraw: invalid dimensions", newCanvasWidth, newCanvasHeight);
+                     // Clear canvas if it has valid dimensions currently
+                     if (canvas.width > 0 && canvas.height > 0) ctx.clearRect(0, 0, canvas.width, canvas.height);
                      // Also clear/stop animation preview if dimensions are invalid
                      animationPreviewCanvas.width = 1; animationPreviewCanvas.height = 1; // Minimal size
                      animationPreviewCtx.clearRect(0, 0, 1, 1);
                      stopAnimation();
-                    return;
-                }
-                if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
-                    canvas.width = newCanvasWidth; canvas.height = newCanvasHeight;
-                    canvas.style.width = `${newCanvasWidth}px`; canvas.style.height = `${newCanvasHeight}px`;
-                }
+                     return;
+                 }
 
-                // Resize animation preview canvas
-                if (animationPreviewCanvas.width !== frameWidth || animationPreviewCanvas.height !== frameHeight) {
-                    animationPreviewCanvas.width = frameWidth > 0 ? frameWidth : 1;
+                 // Resize main canvas only if dimensions have changed
+                 if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
+                     canvas.width = newCanvasWidth;
+                     canvas.height = newCanvasHeight;
+                     // Update style for container scrolling (optional, usually handled by overflow)
+                     // canvas.style.width = `${newCanvasWidth}px`; // Style width might not be needed if container handles sizing
+                     // canvas.style.height = `${newCanvasHeight}px`;
+                 }
+
+                 // Resize animation preview canvas based on frame dimensions
+                 if (animationPreviewCanvas.width !== frameWidth || animationPreviewCanvas.height !== frameHeight) {
+                    animationPreviewCanvas.width = frameWidth > 0 ? frameWidth : 1; // Ensure positive dimensions
                     animationPreviewCanvas.height = frameHeight > 0 ? frameHeight : 1;
-                    // Restart animation after resize
+                    // Need to restart animation as the canvas size changed
                     startAnimation();
-                }
+                 }
 
-                drawGrid();
-                drawImages();
-                updateSelectionHighlight();
-            } catch (e) { console.error("Error in redrawCanvas:", e); showMessage("Error updating canvas.", 5000); }
+                 // Redraw components
+                 drawGrid();
+                 drawImages();
+                 updateSelectionHighlight(); // Update highlight position/visibility
+
+             } catch (e) {
+                 console.error("Error in redrawCanvas:", e);
+                 showMessage("Error updating canvas.", 5000);
+             }
         }
 
         // --- Event Handlers ---
+
+        /**
+         * Handles changes in the grid size or frame dimension input fields.
+         * Updates state variables, filters out images outside the new bounds,
+         * and triggers a canvas redraw.
+         */
         function handleSizeChange() {
-            const newCols = parseInt(gridColsInput.value); const newRows = parseInt(gridRowsInput.value);
-            const newFrameW = parseInt(frameWidthInput.value); const newFrameH = parseInt(frameHeightInput.value);
+            // Read and validate new values
+            const newCols = parseInt(gridColsInput.value);
+            const newRows = parseInt(gridRowsInput.value);
+            const newFrameW = parseInt(frameWidthInput.value);
+            const newFrameH = parseInt(frameHeightInput.value);
+
+            // Validate inputs: must be positive numbers
             if (isNaN(newCols) || isNaN(newRows) || isNaN(newFrameW) || isNaN(newFrameH) || newCols < 1 || newRows < 1 || newFrameW < 1 || newFrameH < 1) {
                 showMessage("Invalid size: values must be positive numbers.");
-                gridColsInput.value = gridCols; gridRowsInput.value = gridRows; frameWidthInput.value = frameWidth; frameHeightInput.value = frameHeight; return;
+                // Reset inputs to previous valid values
+                gridColsInput.value = gridCols;
+                gridRowsInput.value = gridRows;
+                frameWidthInput.value = frameWidth;
+                frameHeightInput.value = frameHeight;
+                return;
             }
-            gridCols = newCols; gridRows = newRows; frameWidth = newFrameW; frameHeight = newFrameH;
+
+            // Update state variables
+            gridCols = newCols;
+            gridRows = newRows;
+            frameWidth = newFrameW;
+            frameHeight = newFrameH;
+
+            // Remove images that are now outside the grid boundaries
             const oldSelectedId = selectedFrameId;
             placedImages = placedImages.filter(item => item.row < gridRows && item.col < gridCols);
-            if (oldSelectedId !== null && !placedImages.some(item => item.id === oldSelectedId)) { selectedFrameId = null; }
-            redrawCanvas(); // This will also resize preview and restart animation
+
+            // Check if the selected image was removed
+            if (oldSelectedId !== null && !placedImages.some(item => item.id === oldSelectedId)) {
+                selectedFrameId = null; // Deselect if it was removed
+            }
+
+            redrawCanvas(); // Redraw everything with new dimensions
+            startAnimation(); // Restart animation as frames might have changed/resized
         }
 
         // --- Frame Import ---
-        function handleImportFramesClick() { frameFileInput.click(); }
+
+        /**
+         * Handles the click event for the "Import Frames" button.
+         * Triggers a click on the hidden file input.
+         */
+        function handleImportFramesClick() {
+            frameFileInput.click(); // Programmatically click the hidden file input
+        }
+
+        /**
+         * Handles the file selection event for individual frames.
+         * Reads selected image files, creates Image objects, and places them
+         * in the next available grid slots.
+         * @param {Event} event - The file input change event.
+         */
         function handleFrameFileSelect(event) {
-            const files = event.target.files; if (!files.length) return;
-            let imagesSuccessfullyLoaded = 0, imagesFailedToLoad = 0, slotsAttempted = 0, totalFiles = files.length;
-            let slotsAvailable = gridRows * gridCols - placedImages.length;
-            function findNextAvailableSlot() { for (let r = 0; r < gridRows; r++) for (let c = 0; c < gridCols; c++) if (!placedImages.some(img => img.row === r && img.col === c)) return { row: r, col: c }; return null; }
-            if (totalFiles > slotsAvailable) showMessage(`Attempting ${totalFiles} frames, only ${slotsAvailable} slots empty.`, 4000);
+            const files = event.target.files;
+            if (!files || files.length === 0) return; // No files selected
+
+            let imagesSuccessfullyLoaded = 0;
+            let imagesFailedToLoad = 0;
+            const totalFiles = files.length;
+            let slotsAvailable = (gridRows * gridCols) - placedImages.length;
+
+            // Helper function to find the next empty row/col
+            function findNextAvailableSlot() {
+                for (let r = 0; r < gridRows; r++) {
+                    for (let c = 0; c < gridCols; c++) {
+                        if (!placedImages.some(img => img.row === r && img.col === c)) {
+                            return { row: r, col: c };
+                        }
+                    }
+                }
+                return null; // No slots available
+            }
+
+            // Warn if trying to import more frames than available slots
+            if (totalFiles > slotsAvailable) {
+                showMessage(`Warning: ${totalFiles} files selected, but only ${slotsAvailable} slots available. Some images may be skipped.`, 5000);
+            }
+
+            // Process each selected file
             Array.from(files).forEach((file) => {
-                slotsAttempted++; const reader = new FileReader();
+                const reader = new FileReader();
+
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = () => {
                         const slot = findNextAvailableSlot();
                         if (slot) {
-                             placedImages.push({ img: img, row: slot.row, col: slot.col, id: nextImageId++ });
-                             imagesSuccessfullyLoaded++;
-                             redrawCanvas(); // Redraw main canvas
-                             startAnimation(); // Update animation sequence
-                        } else { imagesFailedToLoad++; console.warn(`No slot for ${file.name}`); }
-                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000);
+                            // Add the loaded image to the placedImages array
+                            placedImages.push({
+                                img: img,
+                                row: slot.row,
+                                col: slot.col,
+                                id: nextImageId++ // Assign a unique ID
+                            });
+                            imagesSuccessfullyLoaded++;
+                            redrawCanvas(); // Update the main canvas display
+                            startAnimation(); // Update the animation sequence
+                        } else {
+                            // No slot available for this image
+                            imagesFailedToLoad++;
+                            console.warn(`No available slot for image ${file.name}.`);
+                        }
+                        // Check if this is the last image processed
+                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
+                             showMessage(`Frame import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000);
+                        }
                     };
-                    img.onerror = () => { console.error(`Failed load frame: ${file.name}`); imagesFailedToLoad++; if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000); };
-                    img.src = e.target.result;
+                    img.onerror = () => {
+                        console.error(`Failed to load image file: ${file.name}`);
+                        imagesFailedToLoad++;
+                        // Check if this is the last image processed
+                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
+                            showMessage(`Frame import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped (due to load errors).`, 5000);
+                        }
+                    };
+                    img.src = e.target.result; // Set image source to the data URL
                 };
-                reader.onerror = () => { console.error(`Failed read frame file: ${file.name}`); imagesFailedToLoad++; if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000); };
-                reader.readAsDataURL(file);
+
+                reader.onerror = () => {
+                    console.error(`Failed to read file: ${file.name}`);
+                    imagesFailedToLoad++;
+                     // Check if this is the last image processed
+                    if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) {
+                        showMessage(`Frame import complete: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped (due to read errors).`, 5000);
+                    }
+                };
+
+                reader.readAsDataURL(file); // Read the file as a data URL
             });
+
+            // Clear the file input value to allow selecting the same file again
             frameFileInput.value = '';
         }
 
+
         // --- Sprite Sheet Import ---
-        function handleImportSheetClick() { sheetFileInput.click(); }
 
-        // --- Update Modal Preview Grid and Inputs ---
-        function updateModalPreviewGridAndInputs(changedInputId) { // Renamed function
-            if (isUpdatingInputs || !sourceSpriteSheetImage || !sourceSpriteSheetImage.complete) return;
-            isUpdatingInputs = true;
-            // ... (Calculations remain the same) ...
-            const currentCols = parseInt(importSheetColsInput.value); const currentRows = parseInt(importSheetRowsInput.value); const currentWidth = parseInt(importSheetWidthInput.value); const currentHeight = parseInt(importSheetHeightInput.value);
-            const imgWidth = sourceSpriteSheetImage.width; const imgHeight = sourceSpriteSheetImage.height;
-            try {
-                if (changedInputId === 'import-sheet-cols' || changedInputId === 'import-sheet-rows') { if (currentCols > 0 && currentRows > 0) { const newFrameW = Math.floor(imgWidth / currentCols); const newFrameH = Math.floor(imgHeight / currentRows); if (newFrameW > 0 && !isNaN(newFrameW)) importSheetWidthInput.value = newFrameW; if (newFrameH > 0 && !isNaN(newFrameH)) importSheetHeightInput.value = newFrameH; } }
-                else if (changedInputId === 'import-sheet-width' || changedInputId === 'import-sheet-height') { if (currentWidth > 0 && currentHeight > 0) { const newCols = Math.floor(imgWidth / currentWidth); const newRows = Math.floor(imgHeight / currentHeight); if (newCols > 0 && !isNaN(newCols)) importSheetColsInput.value = newCols; if (newRows > 0 && !isNaN(newRows)) importSheetRowsInput.value = newRows; } }
-            } catch (e) { console.error("Error during dimension recalculation:", e); }
-
-            // --- Redraw Modal Preview Canvas ---
-            try {
-                modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height);
-                modalPreviewCtx.drawImage(sourceSpriteSheetImage, modalPreviewOffsetX, modalPreviewOffsetY, modalPreviewDrawnWidth, modalPreviewDrawnHeight);
-                const finalCols = parseInt(importSheetColsInput.value); const finalRows = parseInt(importSheetRowsInput.value); const finalFrameW = parseInt(importSheetWidthInput.value); const finalFrameH = parseInt(importSheetHeightInput.value);
-                if (isNaN(finalCols) || isNaN(finalRows) || isNaN(finalFrameW) || isNaN(finalFrameH) || finalCols < 1 || finalRows < 1 || finalFrameW < 1 || finalFrameH < 1) { console.warn("Invalid dimensions for preview grid."); isUpdatingInputs = false; return; }
-                const previewFrameW = finalFrameW * modalPreviewScaleFactor; const previewFrameH = finalFrameH * modalPreviewScaleFactor;
-                modalPreviewCtx.strokeStyle = 'rgba(255, 0, 0, 0.7)'; modalPreviewCtx.lineWidth = 1;
-                for (let i = 1; i < finalCols; i++) { const x = modalPreviewOffsetX + i * previewFrameW; modalPreviewCtx.beginPath(); modalPreviewCtx.moveTo(x, modalPreviewOffsetY); modalPreviewCtx.lineTo(x, modalPreviewOffsetY + modalPreviewDrawnHeight); modalPreviewCtx.stroke(); }
-                for (let i = 1; i < finalRows; i++) { const y = modalPreviewOffsetY + i * previewFrameH; modalPreviewCtx.beginPath(); modalPreviewCtx.moveTo(modalPreviewOffsetX, y); modalPreviewCtx.lineTo(modalPreviewOffsetX + modalPreviewDrawnWidth, y); modalPreviewCtx.stroke(); }
-            } catch (e) { console.error("Error drawing preview grid:", e); }
-            isUpdatingInputs = false;
+        /**
+         * Handles the click event for the "Import Sheet" button.
+         * Triggers a click on the hidden sheet file input.
+         */
+        function handleImportSheetClick() {
+            sheetFileInput.click(); // Programmatically click the hidden file input
         }
 
+        /**
+         * Updates the sprite sheet import modal's preview grid and input values.
+         * When one dimension (cols/rows or width/height) is changed, it recalculates
+         * the other pair based on the source image dimensions. Also redraws the grid overlay.
+         * @param {string | null} changedInputId - The ID of the input element that triggered the update, or null for initial draw.
+         */
+        function updateModalPreviewGridAndInputs(changedInputId) {
+            // Prevent updates if already updating, or if the source image isn't loaded
+            if (isUpdatingModalInputs || !sourceSpriteSheetImage || !sourceSpriteSheetImage.complete) return;
+
+            isUpdatingModalInputs = true; // Set flag to prevent recursion
+
+            // Get current values from modal inputs
+            const currentCols = parseInt(importSheetColsInput.value);
+            const currentRows = parseInt(importSheetRowsInput.value);
+            const currentWidth = parseInt(importSheetWidthInput.value);
+            const currentHeight = parseInt(importSheetHeightInput.value);
+            const imgWidth = sourceSpriteSheetImage.width;
+            const imgHeight = sourceSpriteSheetImage.height;
+
+            try {
+                // Recalculate dimensions based on which input changed
+                if (changedInputId === 'import-sheet-cols' || changedInputId === 'import-sheet-rows') {
+                    // If cols or rows changed, recalculate width and height
+                    if (currentCols > 0 && currentRows > 0) {
+                        const newFrameW = Math.floor(imgWidth / currentCols);
+                        const newFrameH = Math.floor(imgHeight / currentRows);
+                        // Update inputs only if calculated values are valid
+                        if (newFrameW > 0 && !isNaN(newFrameW)) importSheetWidthInput.value = newFrameW;
+                        if (newFrameH > 0 && !isNaN(newFrameH)) importSheetHeightInput.value = newFrameH;
+                    }
+                } else if (changedInputId === 'import-sheet-width' || changedInputId === 'import-sheet-height') {
+                    // If width or height changed, recalculate cols and rows
+                    if (currentWidth > 0 && currentHeight > 0) {
+                        const newCols = Math.floor(imgWidth / currentWidth);
+                        const newRows = Math.floor(imgHeight / currentHeight);
+                        // Update inputs only if calculated values are valid
+                        if (newCols > 0 && !isNaN(newCols)) importSheetColsInput.value = newCols;
+                        if (newRows > 0 && !isNaN(newRows)) importSheetRowsInput.value = newRows;
+                    }
+                }
+            } catch (e) {
+                console.error("Error during modal dimension recalculation:", e);
+            }
+
+            // --- Redraw Modal Preview Canvas with Grid Overlay ---
+            try {
+                // Clear the modal preview canvas
+                modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height);
+                // Draw the scaled source image onto the modal preview canvas
+                modalPreviewCtx.drawImage(sourceSpriteSheetImage, modalPreviewOffsetX, modalPreviewOffsetY, modalPreviewDrawnWidth, modalPreviewDrawnHeight);
+
+                // Get the final (potentially updated) dimensions from inputs
+                const finalCols = parseInt(importSheetColsInput.value);
+                const finalRows = parseInt(importSheetRowsInput.value);
+                const finalFrameW = parseInt(importSheetWidthInput.value);
+                const finalFrameH = parseInt(importSheetHeightInput.value);
+
+                // Validate dimensions before drawing grid
+                if (isNaN(finalCols) || isNaN(finalRows) || isNaN(finalFrameW) || isNaN(finalFrameH) || finalCols < 1 || finalRows < 1 || finalFrameW < 1 || finalFrameH < 1) {
+                    console.warn("Invalid dimensions for modal preview grid.");
+                    isUpdatingModalInputs = false; // Reset flag
+                    return; // Don't draw grid if dimensions are invalid
+                }
+
+                // Calculate frame dimensions on the scaled preview canvas
+                const previewFrameW = finalFrameW * modalPreviewScaleFactor;
+                const previewFrameH = finalFrameH * modalPreviewScaleFactor;
+
+                // Set grid line style
+                modalPreviewCtx.strokeStyle = 'rgba(255, 0, 0, 0.7)'; // Semi-transparent red
+                modalPreviewCtx.lineWidth = 1;
+
+                // Draw vertical grid lines on the preview
+                for (let i = 1; i < finalCols; i++) {
+                    const x = modalPreviewOffsetX + i * previewFrameW;
+                    modalPreviewCtx.beginPath();
+                    modalPreviewCtx.moveTo(x, modalPreviewOffsetY);
+                    modalPreviewCtx.lineTo(x, modalPreviewOffsetY + modalPreviewDrawnHeight);
+                    modalPreviewCtx.stroke();
+                }
+                // Draw horizontal grid lines on the preview
+                for (let i = 1; i < finalRows; i++) {
+                    const y = modalPreviewOffsetY + i * previewFrameH;
+                    modalPreviewCtx.beginPath();
+                    modalPreviewCtx.moveTo(modalPreviewOffsetX, y);
+                    modalPreviewCtx.lineTo(modalPreviewOffsetX + modalPreviewDrawnWidth, y);
+                    modalPreviewCtx.stroke();
+                }
+            } catch (e) {
+                console.error("Error drawing modal preview grid:", e);
+            }
+
+            isUpdatingModalInputs = false; // Reset the flag after updates are done
+        }
+
+
+        /**
+         * Handles the file selection event for importing a full sprite sheet.
+         * Reads the image, displays it in the modal's preview canvas,
+         * attempts to guess initial dimensions, and shows the modal.
+         * @param {Event} event - The file input change event.
+         */
         function handleSheetFileSelect(event) {
-            const file = event.target.files[0]; if (!file) return;
+            const file = event.target.files[0];
+            if (!file) return; // No file selected
+
             const reader = new FileReader();
             reader.onload = function(e) {
+                // Create an Image object from the loaded file data
                 sourceSpriteSheetImage = new Image();
                 sourceSpriteSheetImage.onload = () => {
                     // --- Draw image to MODAL preview canvas ---
-                    const maxWidth = 450; const maxHeight = 300;
-                    const imgWidth = sourceSpriteSheetImage.width; const imgHeight = sourceSpriteSheetImage.height;
-                    const widthScale = maxWidth / imgWidth; const heightScale = maxHeight / imgHeight;
-                    modalPreviewScaleFactor = Math.min(widthScale, heightScale, 1); // Use modal scale factor
-                    modalPreviewDrawnWidth = imgWidth * modalPreviewScaleFactor; modalPreviewDrawnHeight = imgHeight * modalPreviewScaleFactor;
-                    modalPreviewCanvas.width = modalPreviewDrawnWidth > 0 ? modalPreviewDrawnWidth : maxWidth; // Use modal canvas
+                    const maxWidth = 450; // Max width for the preview canvas
+                    const maxHeight = 300; // Max height for the preview canvas
+                    const imgWidth = sourceSpriteSheetImage.width;
+                    const imgHeight = sourceSpriteSheetImage.height;
+
+                    // Calculate scaling factor to fit the image within max dimensions
+                    const widthScale = maxWidth / imgWidth;
+                    const heightScale = maxHeight / imgHeight;
+                    modalPreviewScaleFactor = Math.min(widthScale, heightScale, 1); // Don't scale up
+
+                    // Calculate the dimensions and position to draw the image centered
+                    modalPreviewDrawnWidth = imgWidth * modalPreviewScaleFactor;
+                    modalPreviewDrawnHeight = imgHeight * modalPreviewScaleFactor;
+                    modalPreviewCanvas.width = modalPreviewDrawnWidth > 0 ? modalPreviewDrawnWidth : maxWidth; // Set canvas size
                     modalPreviewCanvas.height = modalPreviewDrawnHeight > 0 ? modalPreviewDrawnHeight : maxHeight;
-                    modalPreviewOffsetX = (modalPreviewCanvas.width - modalPreviewDrawnWidth) / 2; modalPreviewOffsetY = (modalPreviewCanvas.height - modalPreviewDrawnHeight) / 2;
+                    modalPreviewOffsetX = (modalPreviewCanvas.width - modalPreviewDrawnWidth) / 2; // Center horizontally
+                    modalPreviewOffsetY = (modalPreviewCanvas.height - modalPreviewDrawnHeight) / 2; // Center vertically
+
+                    // Clear and draw the scaled image
                     modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height);
                     modalPreviewCtx.drawImage(sourceSpriteSheetImage, modalPreviewOffsetX, modalPreviewOffsetY, modalPreviewDrawnWidth, modalPreviewDrawnHeight);
                     // --- End modal preview drawing ---
 
-                    // ... (Guessing dimensions remains the same) ...
-                    const aspect = imgWidth / imgHeight; let guessCols = 4, guessRows = 4; if (aspect > 1.5 && imgHeight > 0) { guessCols = 8; guessRows = Math.max(1, Math.round(8 / aspect)); } else if (aspect < 0.6 && imgWidth > 0) { guessRows = 8; guessCols = Math.max(1, Math.round(8 * aspect)); } let guessFrameW = (guessCols > 0) ? Math.floor(imgWidth / guessCols) : imgWidth; let guessFrameH = (guessRows > 0) ? Math.floor(imgHeight / guessRows) : imgHeight; if (guessFrameW <= 0) guessFrameW = 1; if (guessFrameH <= 0) guessFrameH = 1; if (guessCols <= 0) guessCols = Math.max(1, Math.floor(imgWidth / guessFrameW)); if (guessRows <= 0) guessRows = Math.max(1, Math.floor(imgHeight / guessFrameH));
-                    importSheetColsInput.value = guessCols; importSheetRowsInput.value = guessRows; importSheetWidthInput.value = guessFrameW; importSheetHeightInput.value = guessFrameH;
+                    // --- Guess Initial Dimensions ---
+                    const aspect = imgWidth / imgHeight;
+                    let guessCols = 4, guessRows = 4;
+                    if (aspect > 1.5 && imgHeight > 0) { // Wide image
+                        guessCols = 8;
+                        guessRows = Math.max(1, Math.round(8 / aspect));
+                    } else if (aspect < 0.6 && imgWidth > 0) { // Tall image
+                        guessRows = 8;
+                        guessCols = Math.max(1, Math.round(8 * aspect));
+                    }
+                    let guessFrameW = (guessCols > 0) ? Math.floor(imgWidth / guessCols) : imgWidth;
+                    let guessFrameH = (guessRows > 0) ? Math.floor(imgHeight / guessRows) : imgHeight;
+                    if (guessFrameW <= 0) guessFrameW = 1; if (guessFrameH <= 0) guessFrameH = 1;
+                    if (guessCols <= 0) guessCols = Math.max(1, Math.floor(imgWidth / guessFrameW));
+                    if (guessRows <= 0) guessRows = Math.max(1, Math.floor(imgHeight / guessFrameH));
 
-                    // ... (Cloning and adding listeners remains the same) ...
+                    // Set the guessed values in the modal inputs
+                    importSheetColsInput.value = guessCols;
+                    importSheetRowsInput.value = guessRows;
+                    importSheetWidthInput.value = guessFrameW;
+                    importSheetHeightInput.value = guessFrameH;
+                    // --- End Guessing Dimensions ---
+
+                    // --- Re-attach Event Listeners ---
                     const newColsInput = importSheetColsInput.cloneNode(true); importSheetColsInput.parentNode.replaceChild(newColsInput, importSheetColsInput); importSheetColsInput = newColsInput;
                     const newRowsInput = importSheetRowsInput.cloneNode(true); importSheetRowsInput.parentNode.replaceChild(newRowsInput, importSheetRowsInput); importSheetRowsInput = newRowsInput;
                     const newWidthInput = importSheetWidthInput.cloneNode(true); importSheetWidthInput.parentNode.replaceChild(newWidthInput, importSheetWidthInput); importSheetWidthInput = newWidthInput;
                     const newHeightInput = importSheetHeightInput.cloneNode(true); importSheetHeightInput.parentNode.replaceChild(newHeightInput, importSheetHeightInput); importSheetHeightInput = newHeightInput;
-                    importSheetColsInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-cols')); importSheetRowsInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-rows')); importSheetWidthInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-width')); importSheetHeightInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-height'));
 
-                    updateModalPreviewGridAndInputs(null); // Update modal preview
-                    importSheetModal.classList.remove('hidden');
+                    // Add listeners to the new input elements
+                    importSheetColsInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-cols'));
+                    importSheetRowsInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-rows'));
+                    importSheetWidthInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-width'));
+                    importSheetHeightInput.addEventListener('input', () => updateModalPreviewGridAndInputs('import-sheet-height'));
+                    // --- End Re-attaching Listeners ---
+
+                    updateModalPreviewGridAndInputs(null); // Draw initial grid overlay
+                    importSheetModal.classList.remove('hidden'); // Show the modal
                 };
-                sourceSpriteSheetImage.onerror = () => { showMessage("Error: Could not load image file.", 5000); sourceSpriteSheetImage = null; };
-                sourceSpriteSheetImage.src = e.target.result;
+                sourceSpriteSheetImage.onerror = () => {
+                    showMessage("Error: Could not load the selected image file.", 5000);
+                    sourceSpriteSheetImage = null;
+                };
+                sourceSpriteSheetImage.src = e.target.result; // Set source to the data URL
             }
-            reader.onerror = () => { showMessage("Error: Could not read file.", 5000); }
-            reader.readAsDataURL(file);
+            reader.onerror = () => {
+                showMessage("Error: Could not read the selected file.", 5000);
+            }
+            reader.readAsDataURL(file); // Read file as data URL
+
+            // Clear the file input value
             sheetFileInput.value = '';
         }
 
+        /**
+         * Handles the click event for the "Cancel" button in the import sheet modal.
+         * Hides the modal, clears the preview, and resets the source image.
+         */
         function handleCancelImportSheet() {
-            importSheetModal.classList.add('hidden');
-            sourceSpriteSheetImage = null;
-            modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height); // Use modal context
-            // ... (Cloning to remove listeners remains the same) ...
-            const cleanCols = importSheetColsInput.cloneNode(true); importSheetColsInput.parentNode.replaceChild(cleanCols, importSheetColsInput); importSheetColsInput = cleanCols; const cleanRows = importSheetRowsInput.cloneNode(true); importSheetRowsInput.parentNode.replaceChild(cleanRows, importSheetRowsInput); importSheetRowsInput = cleanRows; const cleanWidth = importSheetWidthInput.cloneNode(true); importSheetWidthInput.parentNode.replaceChild(cleanWidth, importSheetWidthInput); importSheetWidthInput = cleanWidth; const cleanHeight = importSheetHeightInput.cloneNode(true); importSheetHeightInput.parentNode.replaceChild(cleanHeight, importSheetHeightInput); importSheetHeightInput = cleanHeight;
+            importSheetModal.classList.add('hidden'); // Hide the modal
+            sourceSpriteSheetImage = null; // Clear the reference to the source image
+            modalPreviewCtx.clearRect(0, 0, modalPreviewCanvas.width, modalPreviewCanvas.height); // Clear preview
+
+            // Clone and replace inputs again to remove listeners cleanly
+            const cleanCols = importSheetColsInput.cloneNode(true); importSheetColsInput.parentNode.replaceChild(cleanCols, importSheetColsInput); importSheetColsInput = cleanCols;
+            const cleanRows = importSheetRowsInput.cloneNode(true); importSheetRowsInput.parentNode.replaceChild(cleanRows, importSheetRowsInput); importSheetRowsInput = cleanRows;
+            const cleanWidth = importSheetWidthInput.cloneNode(true); importSheetWidthInput.parentNode.replaceChild(cleanWidth, importSheetWidthInput); importSheetWidthInput = cleanWidth;
+            const cleanHeight = importSheetHeightInput.cloneNode(true); importSheetHeightInput.parentNode.replaceChild(cleanHeight, importSheetHeightInput); importSheetHeightInput = cleanHeight;
         }
 
+
+        /**
+         * Handles the click event for the "Load Sprite Sheet" button in the modal.
+         * Validates dimensions, updates the main editor's settings, clears existing frames,
+         * slices the source image into individual frames, and populates the main canvas.
+         */
         function handleLoadSpriteSheet() {
-            // ... (Validation remains the same) ...
-            const importCols = parseInt(importSheetColsInput.value); const importRows = parseInt(importSheetRowsInput.value); const importFrameW = parseInt(importSheetWidthInput.value); const importFrameH = parseInt(importSheetHeightInput.value); if (isNaN(importCols) || isNaN(importRows) || isNaN(importFrameW) || isNaN(importFrameH) || importCols < 1 || importRows < 1 || importFrameW < 1 || importFrameH < 1) { showMessage("Invalid dimensions.", 4000); return; } if (!sourceSpriteSheetImage || !sourceSpriteSheetImage.complete) { showMessage("Error: Source image missing.", 4000); return; } if (importCols * importFrameW > sourceSpriteSheetImage.width + 5 || importRows * importFrameH > sourceSpriteSheetImage.height + 5) { if (!confirm(`Warning: Dimensions might exceed image size. Continue?`)) { return; } }
+            // Get and validate dimensions from modal inputs
+            const importCols = parseInt(importSheetColsInput.value);
+            const importRows = parseInt(importSheetRowsInput.value);
+            const importFrameW = parseInt(importSheetWidthInput.value);
+            const importFrameH = parseInt(importSheetHeightInput.value);
 
-            console.log(`Loading: ${importCols}x${importRows} frames, ${importFrameW}x${importFrameH}px.`);
-            showMessage("Processing sheet...", 10000);
+            if (isNaN(importCols) || isNaN(importRows) || isNaN(importFrameW) || isNaN(importFrameH) || importCols < 1 || importRows < 1 || importFrameW < 1 || importFrameH < 1) {
+                showMessage("Invalid dimensions specified in the modal.", 4000);
+                return;
+            }
+            if (!sourceSpriteSheetImage || !sourceSpriteSheetImage.complete) {
+                showMessage("Error: Source sprite sheet image is missing or not loaded.", 4000);
+                return;
+            }
+            // Optional: Warn if dimensions seem larger than the image
+            if (importCols * importFrameW > sourceSpriteSheetImage.width + 5 || importRows * importFrameH > sourceSpriteSheetImage.height + 5) {
+                if (!confirm(`Warning: The specified grid dimensions might exceed the actual image size. Continue anyway?`)) {
+                    return; // User cancelled
+                }
+            }
 
-            gridColsInput.value = importCols; gridRowsInput.value = importRows;
-            frameWidthInput.value = importFrameW; frameHeightInput.value = importFrameH;
-            handleSizeChange(); // Update internal state
+            console.log(`Loading sprite sheet: ${importCols}x${importRows} frames, each ${importFrameW}x${importFrameH}px.`);
+            showMessage("Processing sprite sheet, please wait...", 10000); // Show long message
 
-            placedImages = []; nextImageId = 0; selectedFrameId = null;
+            // Update main editor controls and state
+            gridColsInput.value = importCols;
+            gridRowsInput.value = importRows;
+            frameWidthInput.value = importFrameW;
+            frameHeightInput.value = importFrameH;
+            handleSizeChange(); // Apply these changes to the main editor state and canvas
 
-            const promises = [];
-            // ... (Promise creation loop remains the same) ...
-            for (let r = 0; r < importRows; r++) { for (let c = 0; c < importCols; c++) { const sx = c * importFrameW; const sy = r * importFrameH; const framePromise = new Promise((resolve, reject) => { const frameCanvas = document.createElement('canvas'); frameCanvas.width = importFrameW; frameCanvas.height = importFrameH; const frameCtx = frameCanvas.getContext('2d'); try { frameCtx.drawImage(sourceSpriteSheetImage, sx, sy, importFrameW, importFrameH, 0, 0, importFrameW, importFrameH); const frameImg = new Image(); frameImg.onload = () => resolve({ img: frameImg, row: r, col: c }); frameImg.onerror = (err) => { console.error(`Err load frame [${r}, ${c}]`, err); reject(`Failed load ${r}-${c}`); }; frameImg.src = frameCanvas.toDataURL('image/png'); } catch (e) { console.error(`Err draw frame [${r}, ${c}]`, e); reject(`Failed draw ${r}-${c}`); } }); promises.push(framePromise); } }
+            // Clear existing frames and reset ID counter
+            placedImages = [];
+            nextImageId = 0;
+            selectedFrameId = null;
 
-             Promise.all(promises)
+            const promises = []; // Array to hold promises for each frame creation
+
+            // Loop through each frame position in the grid
+            for (let r = 0; r < importRows; r++) {
+                for (let c = 0; c < importCols; c++) {
+                    const sx = c * importFrameW; // Source X position
+                    const sy = r * importFrameH; // Source Y position
+
+                    // Create a promise for processing this single frame
+                    const framePromise = new Promise((resolve, reject) => {
+                        const frameCanvas = document.createElement('canvas');
+                        frameCanvas.width = importFrameW;
+                        frameCanvas.height = importFrameH;
+                        const frameCtx = frameCanvas.getContext('2d');
+
+                        try {
+                            frameCtx.drawImage(sourceSpriteSheetImage, sx, sy, importFrameW, importFrameH, 0, 0, importFrameW, importFrameH);
+                            const frameImg = new Image();
+                            frameImg.onload = () => resolve({ img: frameImg, row: r, col: c });
+                            frameImg.onerror = (err) => { console.error(`Err load frame [${r}, ${c}]`, err); reject(`Failed load ${r}-${c}`); };
+                            frameImg.src = frameCanvas.toDataURL('image/png');
+                        } catch (e) { console.error(`Err draw frame [${r}, ${c}]`, e); reject(`Failed draw ${r}-${c}`); }
+                    });
+                    promises.push(framePromise); // Add the promise to the array
+                }
+            }
+
+            // Wait for all frame extraction promises to complete
+            Promise.all(promises)
                 .then((loadedFramesData) => {
                     placedImages = loadedFramesData.map(data => ({ img: data.img, row: data.row, col: data.col, id: nextImageId++ }));
-                    console.log("Frames processed.");
-                    redrawCanvas(); // Redraw main canvas
-                    startAnimation(); // Start animation with new frames
-                    showMessage(`Sheet loaded! ${loadedFramesData.length} frames.`, 4000);
+                    console.log("All frames processed from sprite sheet.");
+                    redrawCanvas(); // Redraw the main canvas with the new frames
+                    startAnimation(); // Start animation with the new frames
+                    showMessage(`Sprite sheet loaded successfully! ${loadedFramesData.length} frames created.`, 4000);
                 })
-                .catch((error) => { console.error("Error processing:", error); showMessage(`Error loading: ${error}.`, 5000); redrawCanvas(); startAnimation(); /* Still try to animate what loaded */ })
-                .finally(() => { handleCancelImportSheet(); });
+                .catch((error) => {
+                    console.error("Error processing frames from sprite sheet:", error);
+                    showMessage(`Error loading sprite sheet: ${error}. Some frames might be missing.`, 5000);
+                    redrawCanvas(); startAnimation(); // Still try to draw/animate what loaded
+                })
+                .finally(() => {
+                    handleCancelImportSheet(); // Always close the modal
+                });
         }
 
 
         // --- Save Handler ---
-        function handleSaveClick() { /* ... (no changes needed) ... */
-             console.log("Save click."); if (placedImages.length === 0) { showMessage("Nothing to save."); return; } let desiredFilename = prompt("Enter filename:", "spritesheet.png"); if (desiredFilename === null) { showMessage("Save cancelled."); return; } desiredFilename = desiredFilename.trim() || "spritesheet.png"; if (!desiredFilename.toLowerCase().endsWith('.png')) desiredFilename += '.png'; const tempCanvas = document.createElement('canvas'); try { const requiredWidth = gridCols * frameWidth; const requiredHeight = gridRows * frameHeight; if (requiredWidth <= 0 || requiredHeight <= 0) { showMessage("Invalid dimensions."); return; } tempCanvas.width = requiredWidth; tempCanvas.height = requiredHeight; const tempCtx = tempCanvas.getContext('2d'); let imagesDrawn = 0; placedImages.forEach(item => { if (item && item.img && item.img.complete) { try { tempCtx.drawImage(item.img, item.col * frameWidth, item.row * frameHeight, frameWidth, frameHeight); imagesDrawn++; } catch (e) { console.error(`Err draw ID ${item.id}`, e); } } else { console.warn(`Skip unload ID ${item?.id}`); } }); if (imagesDrawn === 0 && placedImages.length > 0) { showMessage("Could not draw images.", 5000); return; } const dataURL = tempCanvas.toDataURL('image/png'); const link = document.createElement('a'); link.href = dataURL; link.download = desiredFilename; document.body.appendChild(link); link.click(); document.body.removeChild(link); showMessage(`Saved as ${desiredFilename}! (${imagesDrawn} frames)`); } catch (e) { console.error("Error saving:", e); showMessage("Error saving. See console.", 5000); } }
+
+        /**
+         * Handles the click event for the "Save Sprite Sheet" button.
+         * Creates a new canvas, draws all placed images onto it, converts to PNG, and downloads.
+         */
+        function handleSaveClick() {
+             console.log("Save button clicked.");
+             if (placedImages.length === 0) { showMessage("There are no frames on the canvas to save."); return; }
+             let desiredFilename = prompt("Enter filename for the sprite sheet (e.g., spritesheet.png):", "spritesheet.png");
+             if (desiredFilename === null) { showMessage("Save cancelled."); return; }
+             desiredFilename = desiredFilename.trim() || "spritesheet.png";
+             if (!desiredFilename.toLowerCase().endsWith('.png')) desiredFilename += '.png';
+             const tempCanvas = document.createElement('canvas');
+             try {
+                 const requiredWidth = gridCols * frameWidth; const requiredHeight = gridRows * frameHeight;
+                 if (requiredWidth <= 0 || requiredHeight <= 0) { showMessage("Cannot save: Invalid sprite sheet dimensions."); return; }
+                 tempCanvas.width = requiredWidth; tempCanvas.height = requiredHeight;
+                 const tempCtx = tempCanvas.getContext('2d');
+                 let imagesDrawn = 0;
+                 placedImages.forEach(item => {
+                     if (item && item.img && item.img.complete) {
+                         try { tempCtx.drawImage(item.img, item.col * frameWidth, item.row * frameHeight, frameWidth, frameHeight); imagesDrawn++; }
+                         catch (e) { console.error(`Error drawing image ID ${item.id} during save:`, e); }
+                     } else { console.warn(`Skipping unloaded/invalid image ID ${item?.id} during save.`); }
+                 });
+                 if (imagesDrawn === 0 && placedImages.length > 0) { showMessage("Error: Could not draw any loaded images to the final sheet.", 5000); return; }
+                 const dataURL = tempCanvas.toDataURL('image/png');
+                 const link = document.createElement('a'); link.href = dataURL; link.download = desiredFilename;
+                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                 showMessage(`Sprite sheet saved as ${desiredFilename}! (${imagesDrawn} frames included)`);
+             } catch (e) { console.error("Error occurred during save process:", e); showMessage("An error occurred while saving. Check console.", 5000); }
+        }
 
          // --- Delete Handler ---
+
+         /**
+          * Handles the click event for the "Delete Frame" button. Removes the selected frame.
+          */
          function handleDeleteSelected() {
-             if (selectedFrameId === null) { showMessage("No frame selected."); return; }
+             if (selectedFrameId === null) { showMessage("No frame selected to delete."); return; }
              const index = placedImages.findIndex(item => item.id === selectedFrameId);
-             if (index !== -1) { const deletedItem = placedImages.splice(index, 1)[0]; console.log(`Deleted ID ${selectedFrameId}`); selectedFrameId = null; redrawCanvas(); startAnimation(); /* Update animation */ showMessage("Frame deleted."); }
-             else { showMessage("Selected frame not found."); selectedFrameId = null; updateSelectionHighlight(); }
+             if (index !== -1) {
+                 const deletedItem = placedImages.splice(index, 1)[0];
+                 console.log(`Deleted frame ID ${selectedFrameId} from [${deletedItem.row}, ${deletedItem.col}]`);
+                 selectedFrameId = null; redrawCanvas(); startAnimation(); showMessage("Selected frame deleted.");
+             } else { showMessage("Error: Selected frame not found to delete."); selectedFrameId = null; updateSelectionHighlight(); }
          }
 
 
         // --- Drag and Drop & Selection Logic ---
-        function getMousePos(canvas, evt) { /* ... (no changes needed) ... */ const rect = canvas.getBoundingClientRect(); const clientX = evt.clientX ?? evt.touches?.[0]?.clientX; const clientY = evt.clientY ?? evt.touches?.[0]?.clientY; if (typeof clientX !== 'number' || typeof clientY !== 'number') { console.warn("No mouse pos."); return null; } return { x: clientX - rect.left, y: clientY - rect.top }; }
+
+        /**
+         * Calculates mouse position relative to the canvas.
+         * @param {HTMLCanvasElement} canvasEl - The canvas element.
+         * @param {MouseEvent | TouchEvent} evt - The event.
+         * @returns {{x: number, y: number} | null} - Position or null.
+         */
+        function getMousePos(canvasEl, evt) {
+            const rect = canvasEl.getBoundingClientRect();
+            const clientX = evt.clientX ?? evt.touches?.[0]?.clientX;
+            const clientY = evt.clientY ?? evt.touches?.[0]?.clientY;
+            if (typeof clientX !== 'number' || typeof clientY !== 'number') { console.warn("Could not determine event coordinates."); return null; }
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        /**
+         * Handles mousedown / touchstart on the main canvas. Initiates potential drag/selection.
+         * @param {MouseEvent | TouchEvent} event
+         */
         function handleMouseDown(event) {
-             const pos = getMousePos(canvas, event); if (!pos) return; if (event.type === 'touchstart') event.preventDefault(); startX = pos.x; startY = pos.y; dragStartX = event.clientX ?? event.touches?.[0]?.clientX; dragStartY = event.clientY ?? event.touches?.[0]?.clientY; dragMoved = false;
-             const clickedCol = Math.floor(pos.x / frameWidth); const clickedRow = Math.floor(pos.y / frameHeight);
-             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) { if (selectedFrameId !== null) { selectedFrameId = null; redrawCanvas(); startAnimation(); /* Update animation */ } draggedImage = null; isDragging = false; return; }
+             const pos = getMousePos(canvas, event); if (!pos) return;
+             if (event.type === 'touchstart') event.preventDefault(); // Prevent scroll on touch
+
+             // Store initial positions
+             dragStartCanvasX = pos.x; dragStartCanvasY = pos.y;
+             dragStartClientX = event.clientX ?? event.touches?.[0]?.clientX;
+             dragStartClientY = event.clientY ?? event.touches?.[0]?.clientY;
+             dragMoved = false; // Reset drag movement flag
+
+             // Calculate clicked grid cell
+             const clickedCol = Math.floor(pos.x / frameWidth);
+             const clickedRow = Math.floor(pos.y / frameHeight);
+
+             // Bounds check
+             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) {
+                 if (selectedFrameId !== null) { selectedFrameId = null; redrawCanvas(); startAnimation(); } // Deselect if clicking outside
+                 draggedImage = null; isDragging = false; return;
+             }
+
+             // Find image at click location
              const clickedImage = placedImages.find(item => item.row === clickedRow && item.col === clickedCol);
-             if (clickedImage) {
-                 draggedImage = clickedImage; isDragging = false; offsetX = pos.x - (draggedImage.col * frameWidth); offsetY = pos.y - (draggedImage.row * frameHeight); canvas.style.cursor = 'grab';
-                 if (selectedFrameId !== clickedImage.id) {
-                     selectedFrameId = clickedImage.id;
-                     redrawCanvas(); // Update visual selection
-                     startAnimation(); // Update animation based on new selection
+
+             if (clickedImage) { // Clicked on an image
+                 draggedImage = clickedImage; isDragging = false;
+                 dragOffsetX = pos.x - (draggedImage.col * frameWidth); // Offset within the frame
+                 dragOffsetY = pos.y - (draggedImage.row * frameHeight);
+                 canvas.style.cursor = 'grab';
+                 if (selectedFrameId !== clickedImage.id) { // Select if not already selected
+                     selectedFrameId = clickedImage.id; redrawCanvas(); startAnimation();
                  }
-             } else {
+             } else { // Clicked on empty cell
                  draggedImage = null; isDragging = false; canvas.style.cursor = 'default';
-                 if (selectedFrameId !== null) {
-                     selectedFrameId = null; // Deselect if clicking empty cell
-                     redrawCanvas();
-                     startAnimation(); // Update animation
+                 if (selectedFrameId !== null) { // Deselect if clicking empty space
+                     selectedFrameId = null; redrawCanvas(); startAnimation();
                  }
              }
         }
-        function handleMouseMove(event) { /* ... (logic for starting drag remains same) ... */
-            if (!draggedImage) return; const currentX = event.clientX ?? event.touches?.[0]?.clientX; const currentY = event.clientY ?? event.touches?.[0]?.clientY; if (typeof currentX !== 'number' || typeof currentY !== 'number') return; const moveThreshold = 5;
-            if (!isDragging && (Math.abs(currentX - dragStartX) > moveThreshold || Math.abs(currentY - dragStartY) > moveThreshold)) {
+
+        /**
+         * Handles mousemove / touchmove on the main canvas. Starts drag if moved enough.
+         * @param {MouseEvent | TouchEvent} event
+         */
+        function handleMouseMove(event) {
+            if (!draggedImage) return; // Exit if not potentially dragging
+
+            const currentClientX = event.clientX ?? event.touches?.[0]?.clientX;
+            const currentClientY = event.clientY ?? event.touches?.[0]?.clientY;
+            if (typeof currentClientX !== 'number' || typeof currentClientY !== 'number') return;
+
+            const moveThreshold = 5; // Pixels threshold
+            if (!isDragging && (Math.abs(currentClientX - dragStartClientX) > moveThreshold || Math.abs(currentClientY - dragStartClientY) > moveThreshold)) {
                 isDragging = true; dragMoved = true;
-                if (selectedFrameId === draggedImage.id) { // Only deselect if the dragged item was selected
-                    selectedFrameId = null;
-                    startAnimation(); // Update animation as selection is cleared
-                }
-                canvas.style.cursor = 'grabbing'; console.log("Drag start ID:", draggedImage.id);
+                // Optionally deselect visually during drag (can be confusing)
+                // if (selectedFrameId === draggedImage.id) { selectedFrameId = null; startAnimation(); }
+                canvas.style.cursor = 'grabbing'; console.log("Drag started for image ID:", draggedImage.id);
+                redrawCanvas(); // Redraw to hide original image position
             }
-            if (isDragging) { if (event.type === 'touchmove') event.preventDefault(); const pos = getMousePos(canvas, event); if (!pos) return; startX = pos.x; startY = pos.y; redrawCanvas(); }
+
+            if (isDragging) {
+                if (event.type === 'touchmove') event.preventDefault(); // Prevent scroll during drag
+                const pos = getMousePos(canvas, event); if (!pos) return;
+                // Update position for drawing the ghost image
+                dragStartCanvasX = pos.x; dragStartCanvasY = pos.y;
+                redrawCanvas(); // Redraw to show ghost image at new position
+            }
         }
+
+        /**
+         * Handles mouseup / touchend on the main canvas. Completes drag or click action.
+         * @param {MouseEvent | TouchEvent} event
+         */
         function handleMouseUp(event) {
             const wasDragging = isDragging; const currentlyDragged = draggedImage;
-            if (isDragging) {
-                isDragging = false; canvas.style.cursor = 'default';
-                let requiresAnimationUpdate = false; // Flag if drop changes animation sequence
+
+            if (isDragging) { // End of a drag
+                isDragging = false; canvas.style.cursor = 'default'; // Reset cursor first
+                let requiresAnimationUpdate = false;
+
                 const pos = getMousePos(canvas, event);
                 if (pos && frameWidth > 0 && frameHeight > 0 && currentlyDragged) {
-                    const targetCol = Math.floor(pos.x / frameWidth); const targetRow = Math.floor(pos.y / frameHeight);
-                    if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) {
+                    const targetCol = Math.floor(pos.x / frameWidth);
+                    const targetRow = Math.floor(pos.y / frameHeight);
+
+                    if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) { // Dropped inside grid
                         const existingImage = placedImages.find(item => item.row === targetRow && item.col === targetCol && item.id !== currentlyDragged.id);
-                        if (!existingImage) {
-                            // Check if the row changed (affects row-based animation)
-                            if (currentlyDragged.row !== targetRow) {
-                                requiresAnimationUpdate = true;
-                            }
+                        if (!existingImage) { // Target cell is empty or was occupied by the dragged item itself
+                            if (currentlyDragged.row !== targetRow) requiresAnimationUpdate = true; // Row change affects animation order
                             currentlyDragged.row = targetRow; currentlyDragged.col = targetCol;
-                            console.log(`Drop ID ${currentlyDragged.id} at [${targetRow}, ${targetCol}]`);
-                        } else { showMessage("Target occupied."); console.log(`Drop fail ID ${currentlyDragged.id}: target [${targetRow}, ${targetCol}] occupied`); }
-                    } else { showMessage("Dropped outside grid."); console.log(`Drop fail ID ${currentlyDragged.id}: outside grid`); }
-                } else { console.warn("Could not get drop location."); }
+                            selectedFrameId = currentlyDragged.id; // Reselect the dropped item
+                            console.log(`Dropped ID ${currentlyDragged.id} at [${targetRow}, ${targetCol}]`);
+                        } else { // Target cell occupied
+                            showMessage("Target grid cell is already occupied.");
+                            console.log(`Drop fail ID ${currentlyDragged.id}: target [${targetRow}, ${targetCol}] occupied`);
+                            selectedFrameId = currentlyDragged.id; // Reselect the item that failed to drop
+                        }
+                    } else { // Dropped outside grid
+                        showMessage("Cannot drop frame outside the grid.");
+                        console.log(`Drop fail ID ${currentlyDragged.id}: outside grid`);
+                        selectedFrameId = currentlyDragged.id; // Reselect the item that failed to drop
+                    }
+                } else { console.warn("Could not get drop location or invalid state."); if(currentlyDragged) selectedFrameId = currentlyDragged.id; } // Try to reselect
+
                 draggedImage = null;
-                redrawCanvas();
-                if (requiresAnimationUpdate) { startAnimation(); } // Update animation only if row changed
-            } else if (currentlyDragged && !dragMoved) { console.log(`Click ID ${currentlyDragged.id}. Sel state: ${selectedFrameId}`); canvas.style.cursor = 'grab'; }
-            if (!isDragging) { draggedImage = null; } dragMoved = false;
+                redrawCanvas(); // Final redraw
+                if (requiresAnimationUpdate || selectedFrameId !== null) startAnimation(); // Update animation if needed
+
+            } else if (currentlyDragged && !dragMoved) { // End of a click (no drag)
+                console.log(`Clicked (no drag) on ID ${currentlyDragged.id}. Selection state: ${selectedFrameId}`);
+                canvas.style.cursor = 'grab'; // Ensure grab cursor stays if selected
+            } else if (!currentlyDragged) { // Clicked empty space
+                 canvas.style.cursor = 'default';
+            }
+
+            // Final cleanup
+            if (!isDragging) draggedImage = null;
+            dragMoved = false;
         }
-        function handleMouseLeave(event) { /* ... (no changes needed) ... */ if (isDragging) { isDragging = false; const previouslyDragged = draggedImage; draggedImage = null; canvas.style.cursor = 'default'; redrawCanvas(); showMessage("Drag cancelled."); console.log(`Drag cancel ID ${previouslyDragged?.id}`); } else if (canvas.style.cursor === 'grab') { canvas.style.cursor = 'default'; } }
+
+        /**
+         * Handles mouseleave event on the main canvas. Cancels drag if active.
+         * @param {MouseEvent} event
+         */
+        function handleMouseLeave(event) {
+            if (isDragging) {
+                const previouslyDragged = draggedImage;
+                isDragging = false; draggedImage = null; canvas.style.cursor = 'default';
+                redrawCanvas(); // Snap back
+                showMessage("Drag cancelled (mouse left canvas).");
+                console.log(`Drag cancel ID ${previouslyDragged?.id}`);
+                if(previouslyDragged) selectedFrameId = previouslyDragged.id; // Reselect
+                startAnimation();
+            } else if (canvas.style.cursor === 'grab') { // Mouse left while hovering over selected
+                canvas.style.cursor = 'default';
+            }
+        }
 
 
         // --- Animation Functions ---
+
+        /**
+         * Stops the animation interval.
+         */
         function stopAnimation() {
             if (animationIntervalId !== null) {
                 clearInterval(animationIntervalId);
                 animationIntervalId = null;
             }
-             // Optionally clear the preview canvas when stopped
-             // animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height);
         }
 
+        /**
+         * The main animation loop called by setInterval.
+         */
         function runAnimationLoop() {
-            if (framesToAnimate.length === 0) {
-                // Clear preview if no frames to animate
-                animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height);
-                return;
-            }
+            if (animationPreviewCanvas.width <= 0 || animationPreviewCanvas.height <= 0) { stopAnimation(); return; }
+            if (!framesToAnimate || framesToAnimate.length === 0) { animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height); return; }
 
-            // Get the current frame data object
             const currentFrameData = framesToAnimate[currentAnimationFrameIndex];
-
-            // Clear previous frame
             animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height);
 
-            // Draw current frame if image is loaded
             if (currentFrameData && currentFrameData.img && currentFrameData.img.complete) {
-                try {
-                    // Draw image centered if canvas is larger (though they should match)
-                    const drawW = animationPreviewCanvas.width;
-                    const drawH = animationPreviewCanvas.height;
-                    animationPreviewCtx.drawImage(currentFrameData.img, 0, 0, drawW, drawH);
-                } catch (e) {
-                    console.error("Error drawing animation frame:", e);
-                    // Optionally draw an error indicator
-                    animationPreviewCtx.fillStyle = 'red';
-                    animationPreviewCtx.fillText('!', drawW / 2, drawH / 2);
-                }
+                try { animationPreviewCtx.drawImage(currentFrameData.img, 0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height); }
+                catch (e) { console.error("Error drawing animation frame:", e); animationPreviewCtx.fillStyle = 'red'; animationPreviewCtx.fillText('!', animationPreviewCanvas.width / 2, animationPreviewCanvas.height / 2); }
             } else {
-                 // Optionally draw a loading indicator
-                 animationPreviewCtx.fillStyle = '#9ca3af';
-                 animationPreviewCtx.textAlign = 'center';
-                 animationPreviewCtx.textBaseline = 'middle';
+                 animationPreviewCtx.fillStyle = '#9ca3af'; animationPreviewCtx.textAlign = 'center'; animationPreviewCtx.textBaseline = 'middle';
                  animationPreviewCtx.fillText('...', animationPreviewCanvas.width / 2, animationPreviewCanvas.height / 2);
             }
-
-            // Move to next frame index
             currentAnimationFrameIndex = (currentAnimationFrameIndex + 1) % framesToAnimate.length;
         }
 
+        /**
+         * Starts or restarts the animation preview based on selection and FPS.
+         */
         function startAnimation() {
-            stopAnimation(); // Clear any existing animation interval
+            stopAnimation(); // Clear existing interval
 
             const selectedItem = selectedFrameId !== null ? placedImages.find(item => item.id === selectedFrameId) : null;
 
-            if (selectedItem) {
-                // Animate frames in the selected row
-                framesToAnimate = placedImages
-                    .filter(item => item.row === selectedItem.row)
-                    .sort((a, b) => a.col - b.col); // Sort by column
-            } else {
-                // Animate all frames, sorted by row, then column
-                framesToAnimate = [...placedImages] // Create a copy before sorting
-                    .sort((a, b) => a.row - b.row || a.col - b.col);
+            if (selectedItem) { // Animate selected row
+                framesToAnimate = placedImages.filter(item => item.row === selectedItem.row).sort((a, b) => a.col - b.col);
+            } else { // Animate all frames
+                framesToAnimate = [...placedImages].sort((a, b) => a.row - b.row || a.col - b.col);
             }
 
-            currentAnimationFrameIndex = 0; // Reset frame index
+            currentAnimationFrameIndex = 0; // Reset index
 
             if (framesToAnimate.length > 0 && animationFps > 0) {
                 const intervalDelay = 1000 / animationFps;
                 animationIntervalId = setInterval(runAnimationLoop, intervalDelay);
-                console.log(`Animation started with ${framesToAnimate.length} frames at ${animationFps} FPS.`);
+                // console.log(`Animation started/restarted with ${framesToAnimate.length} frames at ${animationFps} FPS.`);
             } else {
-                 // Clear preview if no frames or FPS is zero
-                 animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height);
-                 console.log("Animation not started: No frames or FPS is zero.");
+                 animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height); // Clear if no frames/FPS=0
+                 // console.log("Animation not started: No frames or FPS is zero.");
+            }
+        }
+
+        /**
+         * Handles changes to the FPS input field.
+         */
+        function handleFpsChange() {
+            const newFps = parseInt(animationFpsInput.value);
+            if (!isNaN(newFps) && newFps >= 1 && newFps <= 60) {
+                animationFps = newFps;
+                console.log(`Animation FPS changed to: ${animationFps}`);
+                startAnimation(); // Restart animation with the new speed
+            } else {
+                // Reset input if value is invalid
+                animationFpsInput.value = animationFps;
+                showMessage("Invalid FPS value. Please enter a number between 1 and 60.", 4000);
             }
         }
 
@@ -772,6 +1308,8 @@
         gridRowsInput.addEventListener('change', handleSizeChange);
         frameWidthInput.addEventListener('change', handleSizeChange);
         frameHeightInput.addEventListener('change', handleSizeChange);
+        animationFpsInput.addEventListener('change', handleFpsChange); // Listener for FPS input
+
         importFramesButton.addEventListener('click', handleImportFramesClick);
         importSheetButton.addEventListener('click', handleImportSheetClick);
         frameFileInput.addEventListener('change', handleFrameFileSelect);
@@ -779,11 +1317,11 @@
         saveButton.addEventListener('click', handleSaveClick);
         deleteFrameButton.addEventListener('click', handleDeleteSelected);
 
-        // Modal Listeners
+        // Modal Listeners (Inputs listeners added dynamically)
         cancelImportSheetButton.addEventListener('click', handleCancelImportSheet);
         loadSheetButton.addEventListener('click', handleLoadSpriteSheet);
 
-        // Canvas Listeners
+        // Canvas Listeners (Mouse and Touch)
         canvas.addEventListener('mousedown', handleMouseDown);
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUp);
@@ -795,7 +1333,7 @@
 
 
         // --- Initial Setup ---
-        createSelectionHighlight(); // Create the highlight div initially
+        // createSelectionHighlight(); // Selection highlight div is now directly in HTML
         redrawCanvas(); // Draw initial grid and resize preview canvas
         startAnimation(); // Start animation initially (likely with no frames)
         console.log("Sprite Sheet Editor Initialized.");
