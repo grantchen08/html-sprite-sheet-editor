@@ -17,8 +17,6 @@
             background-color: #f9fafb; /* Add a light background */
             display: block; /* Prevent extra space */
         }
-        /* Removed hover rule, handled by JS */
-        /* canvas:active { cursor: grabbing; } Set dynamically in JS */
 
         .control-panel label,
         .modal-content label,
@@ -100,7 +98,8 @@
          }
          /* Keep margin for modal secondary button */
          .modal-content button#cancel-import-sheet,
-         .modal-content button#cancel-downsample-button { /* Apply to both cancel buttons */
+         .modal-content button#cancel-downsample-button,
+         .modal-content button#cancel-save-button { /* Apply to all cancel buttons */
              margin-left: 0.75rem; /* ml-3 */
          }
          /* --- End of Custom Button Styles --- */
@@ -145,16 +144,13 @@
             overflow-y: auto; /* Allow scrolling if content overflows */
             width: 500px; /* Default width */
         }
-        /* Reduce width for simpler modals like downsample */
-        #downsample-modal .modal-content {
-            width: 350px;
+        /* Reduce width for simpler modals */
+        #downsample-modal .modal-content,
+        #save-modal .modal-content { /* Apply to downsample and save modals */
+            width: 400px;
         }
         .modal-content h2 {
              @apply text-xl font-semibold text-gray-900 mb-4;
-        }
-        /* Use Tailwind for modal inputs for simplicity */
-        .modal-content input[type="number"] {
-            /* Using custom style now */
         }
         /* Style for the preview canvas */
         #sprite-sheet-preview-canvas {
@@ -254,8 +250,7 @@
                  <button id="delete-frame-button" class="gui-button" disabled>
                      <span class="lucide lucide-trash-2"></span>Delete Frame
                  </button>
-                <button id="save-button" class="gui-button">
-                     <span class="lucide lucide-save"></span>Save Sprite Sheet
+                <button id="save-button" class="gui-button"> <span class="lucide lucide-save"></span>Save Sprite Sheet
                 </button>
             </div>
         </div>
@@ -331,6 +326,26 @@
             </div>
        </div>
 
+        <div id="save-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h2>Save Options</h2>
+                <div class="mb-4">
+                    <label for="save-filename">Base Filename:</label>
+                    <input type="text" id="save-filename" class="gui-input" value="spritesheet">
+                    <p class="text-xs text-gray-500 mt-1">`.png` extension will be added. If saving by row, `_rowN` will also be added.</p>
+                </div>
+                <div class="flex items-center mb-6">
+                     <input id="save-by-row-checkbox" name="save-by-row" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                     <label for="save-by-row-checkbox" class="ml-2 block text-sm text-gray-900">Save each row as a separate file</label>
+                </div>
+                 <div class="mt-6 text-right">
+                      <button id="cancel-save-button" class="gui-button">Cancel</button>
+                      <button id="confirm-save-button" class="gui-button">Save</button>
+                 </div>
+            </div>
+       </div>
+
+
     </div> <script>
         // --- DOM Elements ---
         const canvas = document.getElementById('sprite-canvas');
@@ -342,7 +357,7 @@
         const frameHeightInput = document.getElementById('frame-height');
         const importFramesButton = document.getElementById('import-frames-button');
         const importSheetButton = document.getElementById('import-sheet-button');
-        const saveButton = document.getElementById('save-button');
+        const saveButton = document.getElementById('save-button'); // Now opens modal
         const deleteFrameButton = document.getElementById('delete-frame-button');
         const frameFileInput = document.getElementById('frame-file-input');
         const sheetFileInput = document.getElementById('sheet-file-input');
@@ -365,12 +380,19 @@
         const animationPreviewCtx = animationPreviewCanvas.getContext('2d');
         const animationFpsInput = document.getElementById('animation-fps');
 
-        // --- Downsample Elements ---
+        // Downsample Elements
         const downsampleButton = document.getElementById('downsample-button');
         const downsampleModal = document.getElementById('downsample-modal');
         const downsampleRatioInput = document.getElementById('downsample-ratio');
         const applyDownsampleButton = document.getElementById('apply-downsample-button');
         const cancelDownsampleButton = document.getElementById('cancel-downsample-button');
+
+        // --- NEW: Save Modal Elements ---
+        const saveModal = document.getElementById('save-modal');
+        const saveFilenameInput = document.getElementById('save-filename');
+        const saveByRowCheckbox = document.getElementById('save-by-row-checkbox');
+        const confirmSaveButton = document.getElementById('confirm-save-button');
+        const cancelSaveButton = document.getElementById('cancel-save-button');
 
 
         // --- State Variables ---
@@ -416,6 +438,21 @@
                 messageBox.timeoutId = null;
             }, duration);
         }
+
+        /**
+         * Triggers a browser download for a given data URL and filename.
+         * @param {string} dataURL - The data URL (e.g., from canvas.toDataURL()).
+         * @param {string} filename - The desired filename for the download.
+         */
+        function triggerDownload(dataURL, filename) {
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
 
         // --- Selection Highlight ---
         function updateSelectionHighlight() {
@@ -639,22 +676,158 @@
                 .finally(() => { handleCancelImportSheet(); });
         }
 
-        // --- Save Handler ---
+        // --- Save Handlers ---
+
+        /**
+         * Opens the Save Options modal.
+         */
         function handleSaveClick() {
-             console.log("Save click."); if (placedImages.length === 0) { showMessage("Nothing to save."); return; }
-             let desiredFilename = prompt("Enter filename:", "spritesheet.png"); if (desiredFilename === null) { showMessage("Save cancelled."); return; }
-             desiredFilename = desiredFilename.trim() || "spritesheet.png"; if (!desiredFilename.toLowerCase().endsWith('.png')) desiredFilename += '.png';
+            if (placedImages.length === 0) {
+                showMessage("Nothing to save.");
+                return;
+            }
+            // Reset modal state
+            saveFilenameInput.value = "spritesheet";
+            saveByRowCheckbox.checked = false;
+            // Show modal
+            saveModal.classList.remove('hidden');
+        }
+
+        /**
+         * Hides the Save Options modal.
+         */
+        function hideSaveModal() {
+            saveModal.classList.add('hidden');
+        }
+
+        /**
+         * Executes the save operation based on modal options.
+         */
+        function executeSave() {
+            const baseFilename = saveFilenameInput.value.trim() || "spritesheet";
+            const saveByRow = saveByRowCheckbox.checked;
+
+            hideSaveModal(); // Hide modal immediately
+
+            if (saveByRow) {
+                saveSheetByRow(baseFilename);
+            } else {
+                saveEntireSheet(baseFilename);
+            }
+        }
+
+        /**
+         * Saves the entire sprite sheet as a single PNG file.
+         * @param {string} filename - The base filename (without extension).
+         */
+        function saveEntireSheet(filename) {
+             console.log("Saving entire sheet as:", filename);
+             if (placedImages.length === 0) { showMessage("Nothing to save."); return; } // Double check
+
+             const fullFilename = filename.toLowerCase().endsWith('.png') ? filename : filename + '.png';
+
              const tempCanvas = document.createElement('canvas');
              try {
-                 const requiredWidth = gridCols * frameWidth; const requiredHeight = gridRows * frameHeight;
-                 if (requiredWidth <= 0 || requiredHeight <= 0) { showMessage("Invalid dimensions."); return; }
-                 tempCanvas.width = requiredWidth; tempCanvas.height = requiredHeight; const tempCtx = tempCanvas.getContext('2d'); let imagesDrawn = 0;
-                 placedImages.forEach(item => { if (item?.img?.complete) { try { tempCtx.drawImage(item.img, item.col * frameWidth, item.row * frameHeight, frameWidth, frameHeight); imagesDrawn++; } catch (e) { console.error(`Err draw ID ${item.id}`, e); } } else { console.warn(`Skip unload ID ${item?.id}`); } });
-                 if (imagesDrawn === 0 && placedImages.length > 0) { showMessage("Could not draw images.", 5000); return; }
-                 const dataURL = tempCanvas.toDataURL('image/png'); const link = document.createElement('a'); link.href = dataURL; link.download = desiredFilename;
-                 document.body.appendChild(link); link.click(); document.body.removeChild(link); showMessage(`Saved as ${desiredFilename}! (${imagesDrawn} frames)`);
-             } catch (e) { console.error("Error saving:", e); showMessage("Error saving. See console.", 5000); }
+                 const requiredWidth = gridCols * frameWidth;
+                 const requiredHeight = gridRows * frameHeight;
+                 if (requiredWidth <= 0 || requiredHeight <= 0) { showMessage("Cannot save: Invalid dimensions."); return; }
+                 tempCanvas.width = requiredWidth; tempCanvas.height = requiredHeight;
+                 const tempCtx = tempCanvas.getContext('2d');
+                 let imagesDrawn = 0;
+                 placedImages.forEach(item => {
+                     if (item?.img?.complete) {
+                         try {
+                             tempCtx.drawImage(item.img, item.col * frameWidth, item.row * frameHeight, frameWidth, frameHeight);
+                             imagesDrawn++;
+                         } catch (e) { console.error(`Error drawing image ID ${item.id} during save:`, e); }
+                     } else { console.warn(`Skipping unloaded/invalid image ID ${item?.id} during save.`); }
+                 });
+                 if (imagesDrawn === 0 && placedImages.length > 0) { showMessage("Error: Could not draw any loaded images.", 5000); return; }
+
+                 const dataURL = tempCanvas.toDataURL('image/png');
+                 triggerDownload(dataURL, fullFilename); // Use helper function
+                 showMessage(`Saved sheet as ${fullFilename}! (${imagesDrawn} frames)`);
+             } catch (e) {
+                 console.error("Error saving entire sheet:", e);
+                 showMessage("An error occurred while saving the sheet. Check console.", 5000);
+             }
         }
+
+        /**
+         * Saves each row of the sprite sheet as a separate PNG file.
+         * @param {string} baseFilename - The base filename (without extension or suffix).
+         */
+        function saveSheetByRow(baseFilename) {
+            console.log("Saving sheet by row, base filename:", baseFilename);
+            if (placedImages.length === 0) { showMessage("Nothing to save."); return; } // Double check
+
+            let filesSavedCount = 0;
+            let maxRow = -1;
+            placedImages.forEach(img => { if (img.row > maxRow) maxRow = img.row; });
+
+            if (maxRow < 0) {
+                showMessage("No rows found to save separately.");
+                return;
+            }
+
+            try {
+                for (let r = 0; r <= maxRow; r++) {
+                    // Get frames for the current row and sort by column
+                    const rowFrames = placedImages
+                        .filter(item => item.row === r)
+                        .sort((a, b) => a.col - b.col);
+
+                    if (rowFrames.length === 0) {
+                        continue; // Skip empty rows
+                    }
+
+                    // Create a temporary canvas for this row
+                    const rowSheetWidth = rowFrames.length * frameWidth;
+                    const rowSheetHeight = frameHeight;
+                    if (rowSheetWidth <= 0 || rowSheetHeight <= 0) {
+                         console.warn(`Skipping row ${r}: Invalid dimensions calculated.`);
+                         continue;
+                    }
+
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = rowSheetWidth;
+                    tempCanvas.height = rowSheetHeight;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    let imagesDrawnThisRow = 0;
+
+                    // Draw frames for this row onto the temp canvas
+                    rowFrames.forEach((item, index) => {
+                         if (item?.img?.complete) {
+                            try {
+                                tempCtx.drawImage(item.img, index * frameWidth, 0, frameWidth, frameHeight);
+                                imagesDrawnThisRow++;
+                            } catch (e) { console.error(`Error drawing image ID ${item.id} for row ${r} save:`, e); }
+                         } else { console.warn(`Skipping unloaded/invalid image ID ${item?.id} for row ${r} save.`); }
+                    });
+
+                    if (imagesDrawnThisRow > 0) {
+                        // Generate filename and trigger download
+                        const filename = `${baseFilename}_row${r}.png`;
+                        const dataURL = tempCanvas.toDataURL('image/png');
+                        triggerDownload(dataURL, filename); // Use helper function
+                        filesSavedCount++;
+                    } else {
+                         console.warn(`Skipping save for row ${r}: No images could be drawn.`);
+                    }
+                } // End row loop
+
+                if (filesSavedCount > 0) {
+                    showMessage(`Saved ${filesSavedCount} row file(s) starting with '${baseFilename}'.`);
+                } else {
+                    showMessage("No rows with drawable frames found to save.");
+                }
+
+            } catch (e) {
+                 console.error("Error saving sheet by row:", e);
+                 showMessage("An error occurred while saving rows separately. Check console.", 5000);
+            }
+        }
+
 
         // --- Delete Handler ---
         function handleDeleteSelected() {
@@ -731,81 +904,32 @@
 
         // --- Downsample Functions ---
         function showDownsampleModal() {
-            if (placedImages.length === 0) {
-                showMessage("No frames loaded to downsample.");
-                return;
-            }
-            downsampleRatioInput.value = "2"; // Reset to default
-            downsampleModal.classList.remove('hidden');
+            if (placedImages.length === 0) { showMessage("No frames loaded to downsample."); return; }
+            downsampleRatioInput.value = "2"; downsampleModal.classList.remove('hidden');
         }
-        function hideDownsampleModal() {
-            downsampleModal.classList.add('hidden');
-        }
+        function hideDownsampleModal() { downsampleModal.classList.add('hidden'); }
         function handleApplyDownsample() {
             const ratioN = parseInt(downsampleRatioInput.value);
-            if (isNaN(ratioN) || ratioN < 2) {
-                showMessage("Invalid downsample ratio. Please enter an integer >= 2.", 4000);
-                return;
-            }
-            if (placedImages.length === 0) {
-                showMessage("No frames to downsample.");
-                hideDownsampleModal();
-                return;
-            }
-
+            if (isNaN(ratioN) || ratioN < 2) { showMessage("Invalid downsample ratio (>= 2).", 4000); return; }
+            if (placedImages.length === 0) { showMessage("No frames to downsample."); hideDownsampleModal(); return; }
             console.log(`Downsampling with ratio N = ${ratioN}`);
-            const downsampledImages = [];
-            let maxColsNeeded = 0;
-            let maxRow = -1;
-            placedImages.forEach(img => { if (img.row > maxRow) maxRow = img.row; }); // Find max row index
-
-            // Process each row
+            const downsampledImages = []; let maxColsNeeded = 0; let maxRow = -1;
+            placedImages.forEach(img => { if (img.row > maxRow) maxRow = img.row; });
             for (let r = 0; r <= maxRow; r++) {
-                // Get frames for the current row and sort them by column
-                const rowFrames = placedImages
-                    .filter(item => item.row === r)
-                    .sort((a, b) => a.col - b.col);
-
-                if (rowFrames.length === 0) continue; // Skip empty rows
-
+                const rowFrames = placedImages.filter(item => item.row === r).sort((a, b) => a.col - b.col);
+                if (rowFrames.length === 0) continue;
                 let newColIndex = 0;
                 for (let i = 0; i < rowFrames.length; i++) {
-                    // Keep frame if its index (0-based) is a multiple of N
-                    if (i % ratioN === 0) {
-                        const frameToKeep = rowFrames[i];
-                        frameToKeep.col = newColIndex; // Re-assign column index
-                        downsampledImages.push(frameToKeep);
-                        newColIndex++;
-                    }
+                    if (i % ratioN === 0) { const frameToKeep = rowFrames[i]; frameToKeep.col = newColIndex; downsampledImages.push(frameToKeep); newColIndex++; }
                 }
-                maxColsNeeded = Math.max(maxColsNeeded, newColIndex); // Update max columns needed
+                maxColsNeeded = Math.max(maxColsNeeded, newColIndex);
             }
-
-            const originalCount = placedImages.length;
-            placedImages = downsampledImages; // Replace original array
-            const newCount = placedImages.length;
-
-            // Update grid columns setting if necessary
-            // Ensure gridCols is at least 1 if there are images, or use the calculated maxColsNeeded
-            const newGridCols = newCount > 0 ? Math.max(1, maxColsNeeded) : parseInt(gridColsInput.value); // Keep original if all removed? Or set to 1? Let's set to max needed or 1.
-
-            if (newGridCols !== gridCols) {
-                 gridCols = newGridCols;
-                 gridColsInput.value = gridCols;
-                 console.log(`Grid columns updated to ${gridCols}`);
-            }
-
-
-             // Optional: Update gridRows if rows become empty (more complex, skipping for now)
-
-            if (selectedFrameId !== null && !placedImages.some(item => item.id === selectedFrameId)) {
-                 selectedFrameId = null; // Deselect if the selected frame was removed
-            }
-
-            redrawCanvas();
-            startAnimation();
-            hideDownsampleModal();
-            showMessage(`Downsampling complete. Kept ${newCount} out of ${originalCount} frames. Grid columns set to ${gridCols}.`, 5000);
+            const originalCount = placedImages.length; placedImages = downsampledImages; const newCount = placedImages.length;
+            const newGridCols = newCount > 0 ? Math.max(1, maxColsNeeded) : parseInt(gridColsInput.value);
+            if (newGridCols !== gridCols) { gridCols = newGridCols; gridColsInput.value = gridCols; console.log(`Grid columns updated to ${gridCols}`); }
+            if (selectedFrameId !== null && !placedImages.some(item => item.id === selectedFrameId)) { selectedFrameId = null; }
+            redrawCanvas(); startAnimation(); hideDownsampleModal();
+            showMessage(`Downsampling complete. Kept ${newCount}/${originalCount} frames. Grid cols set to ${gridCols}.`, 5000);
         }
 
 
@@ -820,17 +944,21 @@
         importSheetButton.addEventListener('click', handleImportSheetClick);
         frameFileInput.addEventListener('change', handleFrameFileSelect);
         sheetFileInput.addEventListener('change', handleSheetFileSelect);
-        saveButton.addEventListener('click', handleSaveClick);
+        saveButton.addEventListener('click', handleSaveClick); // MODIFIED: Opens modal now
         deleteFrameButton.addEventListener('click', handleDeleteSelected);
 
         // Modal Listeners (Import Sheet)
         cancelImportSheetButton.addEventListener('click', handleCancelImportSheet);
         loadSheetButton.addEventListener('click', handleLoadSpriteSheet);
 
-        // --- Downsample Listeners ---
+        // Downsample Listeners
         downsampleButton.addEventListener('click', showDownsampleModal);
         cancelDownsampleButton.addEventListener('click', hideDownsampleModal);
         applyDownsampleButton.addEventListener('click', handleApplyDownsample);
+
+        // --- NEW: Save Modal Listeners ---
+        cancelSaveButton.addEventListener('click', hideSaveModal);
+        confirmSaveButton.addEventListener('click', executeSave);
 
         // Canvas Listeners
         canvas.addEventListener('mousedown', handleMouseDown);
