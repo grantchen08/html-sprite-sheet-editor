@@ -170,17 +170,13 @@
             box-shadow: 0 0 0 2px white; /* Inner white glow for contrast */
             pointer-events: none; /* Don't interfere with clicks */
             z-index: 10; /* Above images */
-            /* display: none; */ /* <-- REMOVED THIS LINE */
             /* Element is visible by default, hidden using the '.hidden' class */
         }
-        /* Removed redundant .hidden rule */
-        /* .selected-frame-highlight.hidden { display: none; } */
 
 
         /* Animation Preview Styles */
         #animation-preview-container {
             /* Removed top border, now part of the side-by-side layout */
-            /* @apply mt-6 pt-4 border-t border-gray-200; */
         }
         #animation-preview-canvas {
             border: 1px solid #d1d5db; /* gray-300 */
@@ -189,9 +185,10 @@
             margin-left: auto; /* Center */
             margin-right: auto;
             margin-top: 0.5rem; /* Space below label */
-            /* Set initial size, will be updated by JS */
-            width: 64px;
-            height: 64px;
+            /* --- REMOVED Fixed width/height --- */
+            /* width: 64px; */
+            /* height: 64px; */
+            /* Display size will be set by JS */
         }
 
     </style>
@@ -265,7 +262,8 @@
                  <p class="text-sm font-medium text-gray-700 mb-2 text-center">Sprite Sheet Canvas</p>
                  <div id="canvas-container" class="relative w-full overflow-auto border border-gray-300 rounded-md bg-gray-50">
                     <canvas id="sprite-canvas"></canvas>
-                    <div id="selection-highlight" class="selected-frame-highlight hidden"></div> </div>
+                    <div id="selection-highlight" class="selected-frame-highlight hidden"></div>
+                 </div>
             </div>
 
 
@@ -538,6 +536,8 @@
                      if (canvas.width > 0 && canvas.height > 0) ctx.clearRect(0, 0, canvas.width, canvas.height);
                      // Also clear/stop animation preview if dimensions are invalid
                      animationPreviewCanvas.width = 1; animationPreviewCanvas.height = 1; // Minimal size
+                     animationPreviewCanvas.style.width = `1px`; // Set display size
+                     animationPreviewCanvas.style.height = `1px`; // Set display size
                      animationPreviewCtx.clearRect(0, 0, 1, 1);
                      stopAnimation();
                      return;
@@ -547,17 +547,20 @@
                  if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
                      canvas.width = newCanvasWidth;
                      canvas.height = newCanvasHeight;
-                     // Update style for container scrolling (optional, usually handled by overflow)
-                     // canvas.style.width = `${newCanvasWidth}px`; // Style width might not be needed if container handles sizing
-                     // canvas.style.height = `${newCanvasHeight}px`;
                  }
 
-                 // Resize animation preview canvas based on frame dimensions
-                 if (animationPreviewCanvas.width !== frameWidth || animationPreviewCanvas.height !== frameHeight) {
-                    animationPreviewCanvas.width = frameWidth > 0 ? frameWidth : 1; // Ensure positive dimensions
-                    animationPreviewCanvas.height = frameHeight > 0 ? frameHeight : 1;
-                    // Need to restart animation as the canvas size changed
-                    startAnimation();
+                 // --- MODIFIED: Resize animation preview canvas (properties AND style) ---
+                 const currentPreviewWidth = frameWidth > 0 ? frameWidth : 1;
+                 const currentPreviewHeight = frameHeight > 0 ? frameHeight : 1;
+
+                 if (animationPreviewCanvas.width !== currentPreviewWidth || animationPreviewCanvas.height !== currentPreviewHeight) {
+                    // Set internal drawing buffer size
+                    animationPreviewCanvas.width = currentPreviewWidth;
+                    animationPreviewCanvas.height = currentPreviewHeight;
+                    // Set CSS display size
+                    animationPreviewCanvas.style.width = `${currentPreviewWidth}px`;
+                    animationPreviewCanvas.style.height = `${currentPreviewHeight}px`;
+                    // Do NOT call startAnimation() here, it's called after redrawCanvas completes
                  }
 
                  // Redraw components
@@ -611,8 +614,8 @@
                 selectedFrameId = null; // Deselect if it was removed
             }
 
-            redrawCanvas(); // Redraw everything with new dimensions
-            startAnimation(); // Restart animation as frames might have changed/resized
+            redrawCanvas(); // Redraw everything with new dimensions (this now resizes preview)
+            startAnimation(); // Restart animation
         }
 
         // --- Frame Import ---
