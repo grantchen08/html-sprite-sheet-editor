@@ -247,16 +247,16 @@
             </div>
             <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
                  <button id="import-frames-button" class="gui-button">
-                    <span class="lucide lucide-upload"></span>Import Frames
-                </button>
+                   <span class="lucide lucide-upload"></span>Import Frames
+                 </button>
                  <button id="import-sheet-button" class="gui-button">
-                    <span class="lucide lucide-file-image"></span>Import Sheet
-                </button>
+                   <span class="lucide lucide-file-image"></span>Import Sheet
+                 </button>
                  <button id="downsample-button" class="gui-button">
-                    <span class="lucide lucide-filter"></span>Downsample
+                   <span class="lucide lucide-filter"></span>Downsample
                  </button>
                  <button id="delete-frame-button" class="gui-button" disabled>
-                     <span class="lucide lucide-trash-2"></span>Delete Frame
+                    <span class="lucide lucide-trash-2"></span>Delete Frame
                  </button>
                 <button id="save-button" class="gui-button"> <span class="lucide lucide-save"></span>Save Sprite Sheet
                 </button>
@@ -282,7 +282,7 @@
                  <div class="mt-4 text-center">
                     <label for="animation-fps" class="text-sm text-gray-600 mr-2">FPS:</label>
                     <input type="number" id="animation-fps" class="gui-input inline-block w-16 text-center" value="10" min="1" max="60">
-                </div>
+                 </div>
             </div>
 
         </div>
@@ -301,22 +301,22 @@
                  </div>
                  <p class="text-sm text-gray-600 mb-4">Define grid/frame size for the area inside the margins.</p>
                  <div class="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
-                     <div>
-                         <label for="import-sheet-cols">Grid Columns:</label>
-                         <input type="number" id="import-sheet-cols" class="gui-input" value="4" min="1" step="1">
-                     </div>
-                     <div>
-                         <label for="import-sheet-rows">Grid Rows:</label>
-                         <input type="number" id="import-sheet-rows" class="gui-input" value="4" min="1" step="1">
-                     </div>
-                     <div>
-                         <label for="import-sheet-width">Frame Width (px):</label>
-                         <input type="number" id="import-sheet-width" class="gui-input" value="64" min="1" step="1">
-                     </div>
-                     <div>
-                         <label for="import-sheet-height">Frame Height (px):</label>
-                         <input type="number" id="import-sheet-height" class="gui-input" value="64" min="1" step="1">
-                     </div>
+                      <div>
+                          <label for="import-sheet-cols">Grid Columns:</label>
+                          <input type="number" id="import-sheet-cols" class="gui-input" value="4" min="1" step="1">
+                      </div>
+                      <div>
+                          <label for="import-sheet-rows">Grid Rows:</label>
+                          <input type="number" id="import-sheet-rows" class="gui-input" value="4" min="1" step="1">
+                      </div>
+                      <div>
+                          <label for="import-sheet-width">Frame Width (px):</label>
+                          <input type="number" id="import-sheet-width" class="gui-input" value="64" min="1" step="1">
+                      </div>
+                      <div>
+                          <label for="import-sheet-height">Frame Height (px):</label>
+                          <input type="number" id="import-sheet-height" class="gui-input" value="64" min="1" step="1">
+                      </div>
                  </div>
                  <p class="text-sm font-medium text-gray-700 mb-1">Margins (px):</p>
                  <div class="grid grid-cols-4 gap-x-4 gap-y-3 mb-4">
@@ -350,8 +350,8 @@
                     </div>
                  </div>
                  <div class="mt-6 text-right">
-                      <button id="cancel-import-sheet" class="gui-button">Cancel</button>
-                      <button id="load-sheet-button" class="gui-button">Load Sprite Sheet</button>
+                       <button id="cancel-import-sheet" class="gui-button">Cancel</button>
+                       <button id="load-sheet-button" class="gui-button">Load Sprite Sheet</button>
                  </div>
              </div>
         </div>
@@ -365,8 +365,8 @@
                     <input type="number" id="downsample-ratio" class="gui-input" value="2" min="2" step="1">
                 </div>
                  <div class="mt-6 text-right">
-                      <button id="cancel-downsample-button" class="gui-button">Cancel</button>
-                      <button id="apply-downsample-button" class="gui-button">Apply Downsampling</button>
+                       <button id="cancel-downsample-button" class="gui-button">Cancel</button>
+                       <button id="apply-downsample-button" class="gui-button">Apply Downsampling</button>
                  </div>
             </div>
        </div>
@@ -384,8 +384,8 @@
                      <label for="save-by-row-checkbox" class="ml-2 block text-sm text-gray-900">Save each row as a separate file</label>
                 </div>
                  <div class="mt-6 text-right">
-                      <button id="cancel-save-button" class="gui-button">Cancel</button>
-                      <button id="confirm-save-button" class="gui-button">Save</button>
+                       <button id="cancel-save-button" class="gui-button">Cancel</button>
+                       <button id="confirm-save-button" class="gui-button">Save</button>
                  </div>
             </div>
        </div>
@@ -532,75 +532,75 @@
 
         // --- Canvas Drawing ---
         function drawGrid() {
-             try {
-                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                 ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-                 for (let i = 0; i <= gridCols; i++) {
-                     const x = i * frameWidth; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-                 }
-                 for (let i = 0; i <= gridRows; i++) {
-                     const y = i * frameHeight; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-                 }
-             } catch (e) { console.error("Error drawing grid:", e); showMessage("Error rendering grid.", 5000); }
+            try {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+                for (let i = 0; i <= gridCols; i++) {
+                    const x = i * frameWidth; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+                }
+                for (let i = 0; i <= gridRows; i++) {
+                    const y = i * frameHeight; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+                }
+            } catch (e) { console.error("Error drawing grid:", e); showMessage("Error rendering grid.", 5000); }
         }
 
         function drawImages() {
-             try {
-                 canvas.style.cursor = 'default';
-                 placedImages.forEach(item => {
-                     const drawX = item.col * frameWidth; const drawY = item.row * frameHeight;
-                     if (item?.img?.complete) {
-                         if (!isDragging || item.id !== draggedImage?.id) {
-                             ctx.drawImage(item.img, drawX, drawY, frameWidth, frameHeight);
-                         }
-                     } else if (item?.img) { // Image exists but not loaded
-                         ctx.fillStyle = '#f3f4f6'; ctx.fillRect(drawX + 2, drawY + 2, frameWidth - 4, frameHeight - 4);
-                         ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '12px Inter';
-                         ctx.fillText('Loading...', drawX + frameWidth / 2, drawY + frameHeight / 2);
-                     }
-                 });
-                 if (isDragging && draggedImage?.img?.complete) {
-                     ctx.globalAlpha = 0.6;
-                     ctx.drawImage(draggedImage.img, dragStartCanvasX - dragOffsetX, dragStartCanvasY - dragOffsetY, frameWidth, frameHeight);
-                     ctx.globalAlpha = 1.0; canvas.style.cursor = 'grabbing';
-                 }
-             } catch (e) {
-                 console.error("Error drawing images:", e); showMessage("Error rendering images.", 5000);
-                 if (isDragging) { isDragging = false; draggedImage = null; canvas.style.cursor = 'default'; }
-             }
+            try {
+                canvas.style.cursor = 'default';
+                placedImages.forEach(item => {
+                    const drawX = item.col * frameWidth; const drawY = item.row * frameHeight;
+                    if (item?.img?.complete) {
+                        if (!isDragging || item.id !== draggedImage?.id) {
+                            ctx.drawImage(item.img, drawX, drawY, frameWidth, frameHeight);
+                        }
+                    } else if (item?.img) { // Image exists but not loaded
+                        ctx.fillStyle = '#f3f4f6'; ctx.fillRect(drawX + 2, drawY + 2, frameWidth - 4, frameHeight - 4);
+                        ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '12px Inter';
+                        ctx.fillText('Loading...', drawX + frameWidth / 2, drawY + frameHeight / 2);
+                    }
+                });
+                if (isDragging && draggedImage?.img?.complete) {
+                    ctx.globalAlpha = 0.6;
+                    ctx.drawImage(draggedImage.img, dragStartCanvasX - dragOffsetX, dragStartCanvasY - dragOffsetY, frameWidth, frameHeight);
+                    ctx.globalAlpha = 1.0; canvas.style.cursor = 'grabbing';
+                }
+            } catch (e) {
+                console.error("Error drawing images:", e); showMessage("Error rendering images.", 5000);
+                if (isDragging) { isDragging = false; draggedImage = null; canvas.style.cursor = 'default'; }
+            }
         }
 
         function redrawCanvas() {
-             try {
-                 const newCanvasWidth = gridCols * frameWidth;
-                 const newCanvasHeight = gridRows * frameHeight;
+            try {
+                const newCanvasWidth = gridCols * frameWidth;
+                const newCanvasHeight = gridRows * frameHeight;
 
-                 if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) {
-                     console.warn("Skipping redraw: invalid dimensions", newCanvasWidth, newCanvasHeight);
-                     if (canvas.width > 0 && canvas.height > 0) ctx.clearRect(0, 0, canvas.width, canvas.height);
-                     animationPreviewCanvas.width = 1; animationPreviewCanvas.height = 1;
-                     animationPreviewCanvas.style.width = `1px`; animationPreviewCanvas.style.height = `1px`;
-                     animationPreviewCtx.clearRect(0, 0, 1, 1); stopAnimation(); return;
-                 }
+                if (newCanvasWidth <= 0 || newCanvasHeight <= 0 || !Number.isFinite(newCanvasWidth) || !Number.isFinite(newCanvasHeight)) {
+                    console.warn("Skipping redraw: invalid dimensions", newCanvasWidth, newCanvasHeight);
+                    if (canvas.width > 0 && canvas.height > 0) ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    animationPreviewCanvas.width = 1; animationPreviewCanvas.height = 1;
+                    animationPreviewCanvas.style.width = `1px`; animationPreviewCanvas.style.height = `1px`;
+                    animationPreviewCtx.clearRect(0, 0, 1, 1); stopAnimation(); return;
+                }
 
-                 if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
-                     canvas.width = newCanvasWidth; canvas.height = newCanvasHeight;
-                 }
+                if (canvas.width !== newCanvasWidth || canvas.height !== newCanvasHeight) {
+                    canvas.width = newCanvasWidth; canvas.height = newCanvasHeight;
+                }
 
-                 const currentPreviewWidth = frameWidth > 0 ? frameWidth : 1;
-                 const currentPreviewHeight = frameHeight > 0 ? frameHeight : 1;
-                 if (animationPreviewCanvas.width !== currentPreviewWidth || animationPreviewCanvas.height !== currentPreviewHeight) {
-                    animationPreviewCanvas.width = currentPreviewWidth;
-                    animationPreviewCanvas.height = currentPreviewHeight;
-                    animationPreviewCanvas.style.width = `${currentPreviewWidth}px`;
-                    animationPreviewCanvas.style.height = `${currentPreviewHeight}px`;
-                 }
+                const currentPreviewWidth = frameWidth > 0 ? frameWidth : 1;
+                const currentPreviewHeight = frameHeight > 0 ? frameHeight : 1;
+                if (animationPreviewCanvas.width !== currentPreviewWidth || animationPreviewCanvas.height !== currentPreviewHeight) {
+                   animationPreviewCanvas.width = currentPreviewWidth;
+                   animationPreviewCanvas.height = currentPreviewHeight;
+                   animationPreviewCanvas.style.width = `${currentPreviewWidth}px`;
+                   animationPreviewCanvas.style.height = `${currentPreviewHeight}px`;
+                }
 
-                 drawGrid();
-                 drawImages();
-                 updateSelectionHighlight();
+                drawGrid();
+                drawImages();
+                updateSelectionHighlight();
 
-             } catch (e) { console.error("Error in redrawCanvas:", e); showMessage("Error updating canvas.", 5000); }
+            } catch (e) { console.error("Error in redrawCanvas:", e); showMessage("Error updating canvas.", 5000); }
         }
 
         // --- Event Handlers ---
@@ -691,7 +691,7 @@
                         if (newRows > 0 && !isNaN(newRows) && importSheetRowsInput.value !== String(newRows)) importSheetRowsInput.value = newRows;
                          else if (newRows <= 0 || isNaN(newRows)) importSheetRowsInput.value = '';
                     }
-                }
+                 }
             } catch (e) { console.error("Error during modal dimension recalculation:", e); }
 
             try {
