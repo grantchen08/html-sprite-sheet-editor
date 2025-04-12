@@ -611,45 +611,257 @@
                 showMessage("Invalid size: values must be positive numbers.");
                 gridColsInput.value = gridCols; gridRowsInput.value = gridRows; frameWidthInput.value = frameWidth; frameHeightInput.value = frameHeight; return;
             }
+            // Store previous values for potential resizing check
+            const oldFrameWidth = frameWidth;
+            const oldFrameHeight = frameHeight;
+
             gridCols = newCols; gridRows = newRows; frameWidth = newFrameW; frameHeight = newFrameH;
             const oldSelectedId = selectedFrameId;
+
+            // Filter out images outside the new grid bounds
             placedImages = placedImages.filter(item => item.row < gridRows && item.col < gridCols);
+
+            // Deselect if the selected image was removed
             if (oldSelectedId !== null && !placedImages.some(item => item.id === oldSelectedId)) { selectedFrameId = null; }
-            redrawCanvas();
-            startAnimation();
+
+            // --- START: Resize existing frames if frame dimensions changed ---
+            // Check if frame dimensions actually changed and if there are images
+            if ((frameWidth !== oldFrameWidth || frameHeight !== oldFrameHeight) && placedImages.length > 0) {
+                console.log(`Frame size changed from ${oldFrameWidth}x${oldFrameHeight} to ${frameWidth}x${frameHeight}. Resizing existing ${placedImages.length} frames.`);
+                showMessage("Resizing existing frames...", 5000); // Inform user
+
+                const resizePromises = placedImages.map(item => {
+                    return new Promise((resolve, reject) => {
+                        // Only resize if the image object exists and is loaded
+                        if (!item.img || !item.img.complete || !item.img.naturalWidth || !item.img.naturalHeight) {
+                            console.warn(`Skipping resize for frame ID ${item.id}: Image not loaded or invalid.`);
+                            resolve(item); // Resolve with the original item if not resizable
+                            return;
+                        }
+
+                        // Check if this specific image actually needs resizing (it might already be the target size)
+                        if (item.img.naturalWidth === frameWidth && item.img.naturalHeight === frameHeight) {
+                            resolve(item); // No resize needed for this one
+                            return;
+                        }
+
+                        const resizeCanvas = document.createElement('canvas');
+                        resizeCanvas.width = frameWidth;
+                        resizeCanvas.height = frameHeight;
+                        const resizeCtx = resizeCanvas.getContext('2d');
+
+                        // Apply high-quality smoothing
+                        resizeCtx.imageSmoothingEnabled = true;
+                        resizeCtx.imageSmoothingQuality = 'high';
+
+                        try {
+                            // Draw the original image onto the resize canvas (resampling happens here)
+                            resizeCtx.drawImage(item.img, 0, 0, item.img.naturalWidth, item.img.naturalHeight, 0, 0, frameWidth, frameHeight);
+
+                            // Create a new Image object from the resized canvas data
+                            const resizedImg = new Image();
+                            resizedImg.onload = () => {
+                                // Create a *new* item object with the resized image, keeping other properties
+                                resolve({ ...item, img: resizedImg });
+                            };
+                            resizedImg.onerror = (err) => {
+                                console.error(`Error loading resized image data for frame ID ${item.id}:`, err);
+                                reject(new Error(`Failed to load resized image for frame ID ${item.id}`));
+                            };
+                            resizedImg.src = resizeCanvas.toDataURL('image/png');
+
+                        } catch (e) {
+                            console.error(`Error resizing frame ID ${item.id}:`, e);
+                            reject(new Error(`Failed to resize frame ID ${item.id}`));
+                        }
+                    });
+                });
+
+                // Wait for all resize operations to complete
+                Promise.allSettled(resizePromises)
+                    .then(results => {
+                        const updatedImages = [];
+                        let resizeSuccessCount = 0;
+                        let resizeFailCount = 0;
+
+                        results.forEach((result, index) => {
+                            if (result.status === 'fulfilled') {
+                                updatedImages.push(result.value); // Add the (potentially resized) item
+                                // Check if resize actually happened for logging purposes
+                                if (result.value.img !== placedImages[index].img) {
+                                     resizeSuccessCount++;
+                                }
+                            } else {
+                                console.error(`Failed to resize frame ID ${placedImages[index].id}:`, result.reason);
+                                updatedImages.push(placedImages[index]); // Keep the original image on failure
+                                resizeFailCount++;
+                            }
+                        });
+
+                        placedImages = updatedImages; // Update the main array
+
+                        if (resizeFailCount > 0) {
+                             showMessage(`Resized ${resizeSuccessCount} frames. Failed to resize ${resizeFailCount}.`, 5000);
+                        } else if (resizeSuccessCount > 0) {
+                             showMessage(`Resized ${resizeSuccessCount} existing frames.`, 3000);
+                        } else {
+                             // This case might happen if no images actually needed resizing
+                             console.log("No existing frames required resizing.");
+                        }
+
+
+                        redrawCanvas(); // Redraw with potentially resized images
+                        startAnimation(); // Restart animation
+                    });
+            } else {
+                // If frame size didn't change, just redraw and animate
+                redrawCanvas();
+                startAnimation();
+            }
+            // --- END: Resize existing frames ---
         }
+
 
         // --- Frame Import ---
         function handleImportFramesClick() { frameFileInput.click(); }
+        /**
+         * Handles the selection of individual frame files.
+         * Reads files, resizes them if necessary using high-quality resampling,
+         * and places them into the next available grid slots.
+         */
         function handleFrameFileSelect(event) {
-            const files = event.target.files; if (!files || files.length === 0) return;
-            let imagesSuccessfullyLoaded = 0, imagesFailedToLoad = 0; const totalFiles = files.length;
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const totalFiles = files.length;
             let slotsAvailable = (gridRows * gridCols) - placedImages.length;
-            function findNextAvailableSlot() { for (let r = 0; r < gridRows; r++) for (let c = 0; c < gridCols; c++) if (!placedImages.some(img => img.row === r && img.col === c)) return { row: r, col: c }; return null; }
-            if (totalFiles > slotsAvailable) showMessage(`Warning: ${totalFiles} files selected, only ${slotsAvailable} slots available.`, 5000);
+
+            if (totalFiles > slotsAvailable) {
+                showMessage(`Warning: ${totalFiles} files selected, only ${slotsAvailable} slots available. Some files may be skipped.`, 5000);
+            }
+             if (frameWidth <= 0 || frameHeight <= 0) {
+                 showMessage("Error: Invalid frame dimensions set. Cannot import frames.", 5000);
+                 frameFileInput.value = ''; // Clear selection
+                 return;
+            }
+
+
+            showMessage(`Processing ${totalFiles} frame(s)...`, 10000); // Show initial processing message
+
+            const framePromises = []; // Array to hold promises for each file processing
+
             Array.from(files).forEach((file) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = () => {
+                const promise = new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = () => {
+                            // --- Resizing Logic ---
+                            const needsResize = img.naturalWidth !== frameWidth || img.naturalHeight !== frameHeight;
+                            let finalImagePromise; // Promise for the potentially resized image
+
+                            if (needsResize) {
+                                console.log(`Resizing frame ${file.name} from ${img.naturalWidth}x${img.naturalHeight} to ${frameWidth}x${frameHeight}`);
+                                finalImagePromise = new Promise((resolveResize, rejectResize) => {
+                                    const resizeCanvas = document.createElement('canvas');
+                                    resizeCanvas.width = frameWidth;
+                                    resizeCanvas.height = frameHeight;
+                                    const resizeCtx = resizeCanvas.getContext('2d');
+
+                                    // Apply high-quality smoothing
+                                    resizeCtx.imageSmoothingEnabled = true;
+                                    resizeCtx.imageSmoothingQuality = 'high';
+
+                                    try {
+                                        // Draw the original loaded image onto the resize canvas
+                                        resizeCtx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, frameWidth, frameHeight);
+
+                                        // Create a new Image object from the resized canvas data
+                                        const resizedImg = new Image();
+                                        resizedImg.onload = () => {
+                                            resolveResize(resizedImg); // Resolve with the resized image
+                                        };
+                                        resizedImg.onerror = (err) => {
+                                            console.error(`Error loading resized image data for ${file.name}:`, err);
+                                            rejectResize(new Error(`Failed to load resized image data for ${file.name}`));
+                                        };
+                                        resizedImg.src = resizeCanvas.toDataURL('image/png');
+                                    } catch (resizeError) {
+                                        console.error(`Error during canvas resizing for ${file.name}:`, resizeError);
+                                        rejectResize(new Error(`Canvas resizing failed for ${file.name}`));
+                                    }
+                                });
+                            } else {
+                                // No resize needed, resolve immediately with the original image
+                                finalImagePromise = Promise.resolve(img);
+                            }
+
+                            // Once the final image (original or resized) is ready...
+                            finalImagePromise.then(finalImg => {
+                                resolve({ img: finalImg, file: file }); // Resolve the main promise for this file
+                            }).catch(err => {
+                                reject(err); // Propagate resize/load errors
+                            });
+                            // --- End Resizing Logic ---
+                        };
+                        img.onerror = () => {
+                            console.error(`Failed to load image data for: ${file.name}`);
+                            reject(new Error(`Failed to load image data for ${file.name}`));
+                        };
+                        img.src = e.target.result; // Start loading the original image
+                    };
+                    reader.onerror = () => {
+                        console.error(`Failed to read file: ${file.name}`);
+                        reject(new Error(`Failed to read file ${file.name}`));
+                    };
+                    reader.readAsDataURL(file);
+                });
+                framePromises.push(promise);
+            });
+
+            // Function to find the next available slot (needed after promises resolve)
+            function findNextAvailableSlot() {
+                for (let r = 0; r < gridRows; r++) {
+                    for (let c = 0; c < gridCols; c++) {
+                        if (!placedImages.some(img => img.row === r && img.col === c)) {
+                            return { row: r, col: c };
+                        }
+                    }
+                }
+                return null; // No slot available
+            }
+
+            // Process all promises once they settle
+            Promise.allSettled(framePromises).then(results => {
+                let imagesSuccessfullyPlaced = 0;
+                let imagesFailedToLoadOrPlace = 0;
+
+                results.forEach(result => {
+                    if (result.status === 'fulfilled') {
+                        const { img: finalImage, file } = result.value;
                         const slot = findNextAvailableSlot();
                         if (slot) {
-                            // Resize imported frame if target size is specified (optional, usually done on sheet import)
-                            // For simplicity, we assume individual frames are already the correct size here.
-                            // If resizing is needed here, the logic from handleLoadSpriteSheet would be adapted.
-                            placedImages.push({ img: img, row: slot.row, col: slot.col, id: nextImageId++ });
-                            imagesSuccessfullyLoaded++; redrawCanvas(); startAnimation();
-                        } else { imagesFailedToLoad++; console.warn(`No slot for ${file.name}.`); }
-                        if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 4000);
-                    };
-                    img.onerror = () => { console.error(`Failed load frame: ${file.name}`); imagesFailedToLoad++; if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 5000); };
-                    img.src = e.target.result;
-                };
-                reader.onerror = () => { console.error(`Failed read frame file: ${file.name}`); imagesFailedToLoad++; if (imagesSuccessfullyLoaded + imagesFailedToLoad === totalFiles) showMessage(`Frame import: ${imagesSuccessfullyLoaded} loaded, ${imagesFailedToLoad} skipped.`, 5000); };
-                reader.readAsDataURL(file);
+                            placedImages.push({ img: finalImage, row: slot.row, col: slot.col, id: nextImageId++ });
+                            imagesSuccessfullyPlaced++;
+                        } else {
+                            console.warn(`No slot available for ${file.name}.`);
+                            imagesFailedToLoadOrPlace++;
+                        }
+                    } else {
+                        console.error("Frame processing failed:", result.reason);
+                        imagesFailedToLoadOrPlace++;
+                    }
+                });
+
+                // Update UI after all processing is done
+                redrawCanvas();
+                startAnimation();
+                showMessage(`Frame import finished: ${imagesSuccessfullyPlaced} placed, ${imagesFailedToLoadOrPlace} failed or skipped.`, 5000);
             });
-            frameFileInput.value = '';
+
+            frameFileInput.value = ''; // Clear the file input
         }
+
 
         // --- Sprite Sheet Import ---
         function handleImportSheetClick() { sheetFileInput.click(); }
