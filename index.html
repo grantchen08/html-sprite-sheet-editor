@@ -171,15 +171,8 @@
         }
 
 
-        /* Selection Highlight */
-        .selected-frame-highlight {
-            position: absolute; /* Position relative to canvas container */
-            border: 2px solid #4f46e5; /* Indigo-600 */
-            box-shadow: 0 0 0 2px white; /* Inner white glow for contrast */
-            pointer-events: none; /* Don't interfere with clicks */
-            z-index: 10; /* Above images */
-            /* Element is visible by default, hidden using the '.hidden' class */
-        }
+        /* Selection Highlight - Style removed as it's drawn on canvas now */
+        /* .selected-frame-highlight { ... } */
 
 
         /* Animation Preview Styles */
@@ -216,7 +209,7 @@
       }
       /* Map icon names to their Unicode characters */
       .lucide-upload::before { content: "\ef1b"; } /* upload icon */
-      .lucide-save::before { content: "\ee9f"; }   /* save icon */
+      .lucide-save::before { content: "\ee9f"; }    /* save icon */
       .lucide-file-image::before { content: "\edc8"; } /* file-image icon */
       .lucide-trash-2::before { content: "\ef0b"; } /* trash-2 icon */
       .lucide-filter::before { content: "\edc1"; } /* filter icon */
@@ -256,8 +249,7 @@
                    <span class="lucide lucide-filter"></span>Downsample
                  </button>
                  <button id="delete-frame-button" class="gui-button" disabled>
-                    <span class="lucide lucide-trash-2"></span>Delete Frame
-                 </button>
+                   <span class="lucide lucide-trash-2"></span>Delete Frame(s) </button>
                 <button id="save-button" class="gui-button"> <span class="lucide lucide-save"></span>Save Sprite Sheet
                 </button>
             </div>
@@ -272,8 +264,7 @@
                  <p class="text-sm font-medium text-gray-700 mb-2 text-center">Sprite Sheet Canvas</p>
                  <div id="canvas-container" class="relative w-full overflow-auto border border-gray-300 rounded-md bg-gray-50">
                     <canvas id="sprite-canvas"></canvas>
-                    <div id="selection-highlight" class="selected-frame-highlight hidden"></div>
-                 </div>
+                    </div>
             </div>
 
             <div id="animation-preview-container" class="md:w-1/4 border border-gray-200 rounded-md p-3 bg-gray-50 flex flex-col items-center">
@@ -320,38 +311,38 @@
                  </div>
                  <p class="text-sm font-medium text-gray-700 mb-1">Margins (px):</p>
                  <div class="grid grid-cols-4 gap-x-4 gap-y-3 mb-4">
-                    <div>
-                        <label for="import-margin-left">Left:</label>
-                        <input type="number" id="import-margin-left" class="gui-input" value="0" min="0" step="1">
-                    </div>
-                    <div>
-                        <label for="import-margin-top">Top:</label>
-                        <input type="number" id="import-margin-top" class="gui-input" value="0" min="0" step="1">
-                    </div>
-                    <div>
-                        <label for="import-margin-right">Right:</label>
-                        <input type="number" id="import-margin-right" class="gui-input" value="0" min="0" step="1">
-                    </div>
-                    <div>
-                        <label for="import-margin-bottom">Bottom:</label>
-                        <input type="number" id="import-margin-bottom" class="gui-input" value="0" min="0" step="1">
-                    </div>
+                   <div>
+                       <label for="import-margin-left">Left:</label>
+                       <input type="number" id="import-margin-left" class="gui-input" value="0" min="0" step="1">
+                   </div>
+                   <div>
+                       <label for="import-margin-top">Top:</label>
+                       <input type="number" id="import-margin-top" class="gui-input" value="0" min="0" step="1">
+                   </div>
+                   <div>
+                       <label for="import-margin-right">Right:</label>
+                       <input type="number" id="import-margin-right" class="gui-input" value="0" min="0" step="1">
+                   </div>
+                   <div>
+                       <label for="import-margin-bottom">Bottom:</label>
+                       <input type="number" id="import-margin-bottom" class="gui-input" value="0" min="0" step="1">
+                   </div>
                  </div>
                  <p class="text-sm font-medium text-gray-700 mb-1">Target Frame Size (Optional):</p>
                  <p class="text-xs text-gray-500 mb-2">Leave blank to use original size. Frames will be resampled.</p>
                  <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <div>
-                        <label for="import-target-width">Target Width (px):</label>
-                        <input type="number" id="import-target-width" class="gui-input" placeholder="Original" min="1" step="1">
-                    </div>
-                    <div>
-                        <label for="import-target-height">Target Height (px):</label>
-                        <input type="number" id="import-target-height" class="gui-input" placeholder="Original" min="1" step="1">
-                    </div>
+                   <div>
+                       <label for="import-target-width">Target Width (px):</label>
+                       <input type="number" id="import-target-width" class="gui-input" placeholder="Original" min="1" step="1">
+                   </div>
+                   <div>
+                       <label for="import-target-height">Target Height (px):</label>
+                       <input type="number" id="import-target-height" class="gui-input" placeholder="Original" min="1" step="1">
+                   </div>
                  </div>
                  <div class="mt-6 text-right">
-                       <button id="cancel-import-sheet" class="gui-button">Cancel</button>
-                       <button id="load-sheet-button" class="gui-button">Load Sprite Sheet</button>
+                      <button id="cancel-import-sheet" class="gui-button">Cancel</button>
+                      <button id="load-sheet-button" class="gui-button">Load Sprite Sheet</button>
                  </div>
              </div>
         </div>
@@ -365,8 +356,8 @@
                     <input type="number" id="downsample-ratio" class="gui-input" value="2" min="2" step="1">
                 </div>
                  <div class="mt-6 text-right">
-                       <button id="cancel-downsample-button" class="gui-button">Cancel</button>
-                       <button id="apply-downsample-button" class="gui-button">Apply Downsampling</button>
+                      <button id="cancel-downsample-button" class="gui-button">Cancel</button>
+                      <button id="apply-downsample-button" class="gui-button">Apply Downsampling</button>
                  </div>
             </div>
        </div>
@@ -384,8 +375,8 @@
                      <label for="save-by-row-checkbox" class="ml-2 block text-sm text-gray-900">Save each row as a separate file</label>
                 </div>
                  <div class="mt-6 text-right">
-                       <button id="cancel-save-button" class="gui-button">Cancel</button>
-                       <button id="confirm-save-button" class="gui-button">Save</button>
+                      <button id="cancel-save-button" class="gui-button">Cancel</button>
+                      <button id="confirm-save-button" class="gui-button">Save</button>
                  </div>
             </div>
        </div>
@@ -407,7 +398,7 @@
         const frameFileInput = document.getElementById('frame-file-input');
         const sheetFileInput = document.getElementById('sheet-file-input');
         const messageBox = document.getElementById('message-box');
-        const selectionHighlight = document.getElementById('selection-highlight');
+        // Selection highlight div removed
 
         // Import Sheet Modal elements
         const importSheetModal = document.getElementById('import-sheet-modal');
@@ -461,7 +452,9 @@
         let frameHeight = parseInt(frameHeightInput.value);
         let placedImages = []; // Array to store { img, row, col, id } objects
         let nextImageId = 0;
-        let selectedFrameId = null;
+        // let selectedFrameId = null; // Replaced by Set
+        let selectedFrameIds = new Set(); // Use a Set for multiple selections
+        let lastSelectedFrameId = null; // Track the last clicked frame for Shift+Click
         let sourceSpriteSheetImage = null;
 
         // Modal Preview canvas state
@@ -508,27 +501,41 @@
         }
 
 
-        // --- Selection Highlight ---
-        function updateSelectionHighlight() {
-             if (!selectionHighlight) { console.error("Selection highlight element not found."); return; }
-            if (selectedFrameId !== null) {
-                const selectedItem = placedImages.find(item => item.id === selectedFrameId);
-                if (selectedItem) {
-                    selectionHighlight.style.left = `${selectedItem.col * frameWidth}px`;
-                    selectionHighlight.style.top = `${selectedItem.row * frameHeight}px`;
-                    selectionHighlight.style.width = `${frameWidth}px`;
-                    selectionHighlight.style.height = `${frameHeight}px`;
-                    selectionHighlight.classList.remove('hidden');
-                    deleteFrameButton.disabled = false;
-                    return;
-                } else {
-                    console.warn("Selected frame ID not found, deselecting.");
-                    selectedFrameId = null;
-                }
-            }
-            selectionHighlight.classList.add('hidden');
-            deleteFrameButton.disabled = true;
+        // --- Selection Highlight (Now drawn on canvas) ---
+        function drawSelectionHighlights() {
+             if (selectedFrameIds.size === 0 || frameWidth <= 0 || frameHeight <= 0) {
+                 return;
+             }
+
+             ctx.strokeStyle = '#4f46e5'; // Indigo-600
+             ctx.lineWidth = 2;
+             ctx.fillStyle = 'rgba(79, 70, 229, 0.1)'; // Semi-transparent fill
+
+             selectedFrameIds.forEach(id => {
+                 const selectedItem = placedImages.find(item => item.id === id);
+                 if (selectedItem) {
+                     const x = selectedItem.col * frameWidth;
+                     const y = selectedItem.row * frameHeight;
+                     // Draw slightly inset rectangle for highlight
+                     ctx.strokeRect(x + 1, y + 1, frameWidth - 2, frameHeight - 2);
+                     // Optional: Add a subtle fill
+                     ctx.fillRect(x + 1, y + 1, frameWidth - 2, frameHeight - 2);
+
+                     // Optional: Draw a white inner border for better contrast if needed
+                     // ctx.strokeStyle = 'white';
+                     // ctx.lineWidth = 1;
+                     // ctx.strokeRect(x + 3, y + 3, frameWidth - 6, frameHeight - 6);
+                 }
+             });
+             // Reset stroke/fill style if needed elsewhere
+             ctx.lineWidth = 1;
+             ctx.strokeStyle = '#e5e7eb'; // Reset to grid color
         }
+
+        function updateDeleteButtonState() {
+            deleteFrameButton.disabled = selectedFrameIds.size === 0;
+        }
+
 
         // --- Canvas Drawing ---
         function drawGrid() {
@@ -546,10 +553,13 @@
 
         function drawImages() {
             try {
-                canvas.style.cursor = 'default';
+                // Set default cursor unless dragging
+                if (!isDragging) canvas.style.cursor = 'default';
+
                 placedImages.forEach(item => {
                     const drawX = item.col * frameWidth; const drawY = item.row * frameHeight;
                     if (item?.img?.complete) {
+                        // Don't draw the original image if it's being dragged
                         if (!isDragging || item.id !== draggedImage?.id) {
                             ctx.drawImage(item.img, drawX, drawY, frameWidth, frameHeight);
                         }
@@ -559,10 +569,12 @@
                         ctx.fillText('Loading...', drawX + frameWidth / 2, drawY + frameHeight / 2);
                     }
                 });
+                // Draw the dragged image semi-transparently at the mouse position
                 if (isDragging && draggedImage?.img?.complete) {
                     ctx.globalAlpha = 0.6;
                     ctx.drawImage(draggedImage.img, dragStartCanvasX - dragOffsetX, dragStartCanvasY - dragOffsetY, frameWidth, frameHeight);
-                    ctx.globalAlpha = 1.0; canvas.style.cursor = 'grabbing';
+                    ctx.globalAlpha = 1.0;
+                    canvas.style.cursor = 'grabbing';
                 }
             } catch (e) {
                 console.error("Error drawing images:", e); showMessage("Error rendering images.", 5000);
@@ -598,7 +610,8 @@
 
                 drawGrid();
                 drawImages();
-                updateSelectionHighlight();
+                drawSelectionHighlights(); // Draw highlights after images
+                updateDeleteButtonState(); // Update button based on selection
 
             } catch (e) { console.error("Error in redrawCanvas:", e); showMessage("Error updating canvas.", 5000); }
         }
@@ -616,13 +629,22 @@
             const oldFrameHeight = frameHeight;
 
             gridCols = newCols; gridRows = newRows; frameWidth = newFrameW; frameHeight = newFrameH;
-            const oldSelectedId = selectedFrameId;
+            // const oldSelectedId = selectedFrameId; // No longer single ID
 
             // Filter out images outside the new grid bounds
             placedImages = placedImages.filter(item => item.row < gridRows && item.col < gridCols);
 
-            // Deselect if the selected image was removed
-            if (oldSelectedId !== null && !placedImages.some(item => item.id === oldSelectedId)) { selectedFrameId = null; }
+            // Remove IDs from selection if they are no longer in placedImages
+            const currentPlacedIds = new Set(placedImages.map(item => item.id));
+            selectedFrameIds.forEach(id => {
+                if (!currentPlacedIds.has(id)) {
+                    selectedFrameIds.delete(id);
+                    if (lastSelectedFrameId === id) {
+                        lastSelectedFrameId = null; // Reset last selected if it was removed
+                    }
+                }
+            });
+
 
             // --- START: Resize existing frames if frame dimensions changed ---
             // Check if frame dimensions actually changed and if there are images
@@ -743,7 +765,7 @@
                  showMessage("Error: Invalid frame dimensions set. Cannot import frames.", 5000);
                  frameFileInput.value = ''; // Clear selection
                  return;
-            }
+             }
 
 
             showMessage(`Processing ${totalFiles} frame(s)...`, 10000); // Show initial processing message
@@ -1090,8 +1112,10 @@
             frameHeightInput.value = targetHeight; // Use target height
             handleSizeChange(); // Update main state, canvas size etc. using TARGET size
 
-            // Clear current frames
-            placedImages = []; nextImageId = 0; selectedFrameId = null;
+            // Clear current frames and selection
+            placedImages = []; nextImageId = 0;
+            selectedFrameIds.clear();
+            lastSelectedFrameId = null;
 
             const promises = [];
             for (let r = 0; r < importRows; r++) {
@@ -1144,20 +1168,20 @@
                 }
             }
             Promise.all(promises)
-                .then((loadedFramesData) => {
-                     placedImages = loadedFramesData.map(data => ({ img: data.img, row: data.row, col: data.col, id: nextImageId++ }));
-                     console.log("Frames processed and placedImages updated.");
-                     redrawCanvas(); // Redraw main canvas (now uses target size)
-                     startAnimation(); // Restart animation
-                     showMessage(`Sheet loaded! ${loadedFramesData.length} frames created (resampled to ${targetWidth}x${targetHeight}px).`, 5000);
+                 .then((loadedFramesData) => {
+                      placedImages = loadedFramesData.map(data => ({ img: data.img, row: data.row, col: data.col, id: nextImageId++ }));
+                      console.log("Frames processed and placedImages updated.");
+                      redrawCanvas(); // Redraw main canvas (now uses target size)
+                      startAnimation(); // Restart animation
+                      showMessage(`Sheet loaded! ${loadedFramesData.length} frames created (resampled to ${targetWidth}x${targetHeight}px).`, 5000);
                  })
-                .catch((error) => {
-                     console.error("Error processing frames from promise:", error);
-                     showMessage(`Error loading sheet: ${error}.`, 5000);
-                     redrawCanvas(); startAnimation(); // Still attempt redraw/animate
+                 .catch((error) => {
+                      console.error("Error processing frames from promise:", error);
+                      showMessage(`Error loading sheet: ${error}.`, 5000);
+                      redrawCanvas(); startAnimation(); // Still attempt redraw/animate
                  })
-                .finally(() => {
-                     handleCancelImportSheet(); // Close modal
+                 .finally(() => {
+                      handleCancelImportSheet(); // Close modal
                  });
         }
 
@@ -1220,49 +1244,231 @@
 
         // --- Delete Handler ---
         function handleDeleteSelected() {
-             if (selectedFrameId === null) { showMessage("No frame selected."); return; }
-             const index = placedImages.findIndex(item => item.id === selectedFrameId);
-             if (index !== -1) { const deletedItem = placedImages.splice(index, 1)[0]; console.log(`Deleted ID ${selectedFrameId}`); selectedFrameId = null; redrawCanvas(); startAnimation(); showMessage("Frame deleted."); }
-             else { showMessage("Selected frame not found."); selectedFrameId = null; updateSelectionHighlight(); }
+             if (selectedFrameIds.size === 0) {
+                 showMessage("No frames selected.");
+                 return;
+             }
+             const originalCount = placedImages.length;
+             const idsToDelete = new Set(selectedFrameIds); // Copy the set
+
+             placedImages = placedImages.filter(item => !idsToDelete.has(item.id));
+
+             const deletedCount = originalCount - placedImages.length;
+             console.log(`Deleted ${deletedCount} frames.`);
+
+             selectedFrameIds.clear(); // Clear selection
+             lastSelectedFrameId = null; // Clear last selected anchor
+             redrawCanvas();
+             startAnimation();
+             showMessage(`${deletedCount} frame(s) deleted.`);
         }
 
         // --- Drag and Drop & Selection Logic ---
         function getMousePos(canvasEl, evt) { const rect = canvasEl.getBoundingClientRect(); const clientX = evt.clientX ?? evt.touches?.[0]?.clientX; const clientY = evt.clientY ?? evt.touches?.[0]?.clientY; if (typeof clientX !== 'number' || typeof clientY !== 'number') { console.warn("No mouse pos."); return null; } return { x: clientX - rect.left, y: clientY - rect.top }; }
+
         function handleMouseDown(event) {
-             const pos = getMousePos(canvas, event); if (!pos) return; if (event.type === 'touchstart') event.preventDefault();
-             dragStartCanvasX = pos.x; dragStartCanvasY = pos.y; dragStartClientX = event.clientX ?? event.touches?.[0]?.clientX; dragStartClientY = event.clientY ?? event.touches?.[0]?.clientY; dragMoved = false;
-             const clickedCol = Math.floor(pos.x / frameWidth); const clickedRow = Math.floor(pos.y / frameHeight);
-             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) { if (selectedFrameId !== null) { selectedFrameId = null; redrawCanvas(); startAnimation(); } draggedImage = null; isDragging = false; return; }
+             const pos = getMousePos(canvas, event); if (!pos) return;
+             if (event.type === 'touchstart') event.preventDefault(); // Prevent touch scrolling
+
+             const isShiftPressed = event.shiftKey;
+             dragStartCanvasX = pos.x; dragStartCanvasY = pos.y;
+             dragStartClientX = event.clientX ?? event.touches?.[0]?.clientX;
+             dragStartClientY = event.clientY ?? event.touches?.[0]?.clientY;
+             dragMoved = false;
+
+             // Calculate clicked grid cell
+             const clickedCol = Math.floor(pos.x / frameWidth);
+             const clickedRow = Math.floor(pos.y / frameHeight);
+
+             // Check if click is within grid bounds
+             if (clickedCol < 0 || clickedCol >= gridCols || clickedRow < 0 || clickedRow >= gridRows || frameWidth <= 0 || frameHeight <= 0) {
+                 // Clicked outside grid, deselect all
+                 if (selectedFrameIds.size > 0) {
+                     selectedFrameIds.clear();
+                     lastSelectedFrameId = null;
+                     redrawCanvas();
+                     startAnimation();
+                 }
+                 draggedImage = null;
+                 isDragging = false;
+                 return;
+             }
+
              const clickedImage = placedImages.find(item => item.row === clickedRow && item.col === clickedCol);
-             if (clickedImage) { draggedImage = clickedImage; isDragging = false; dragOffsetX = pos.x - (draggedImage.col * frameWidth); dragOffsetY = pos.y - (draggedImage.row * frameHeight); canvas.style.cursor = 'grab'; if (selectedFrameId !== clickedImage.id) { selectedFrameId = clickedImage.id; redrawCanvas(); startAnimation(); } }
-             else { draggedImage = null; isDragging = false; canvas.style.cursor = 'default'; if (selectedFrameId !== null) { selectedFrameId = null; redrawCanvas(); startAnimation(); } }
+             const clickedImageId = clickedImage ? clickedImage.id : null;
+
+             if (isShiftPressed && lastSelectedFrameId !== null) {
+                 // --- Shift+Click Logic ---
+                 const lastSelectedItem = placedImages.find(item => item.id === lastSelectedFrameId);
+                 if (lastSelectedItem && clickedImage) { // Need both start and end points
+                     const startRow = Math.min(lastSelectedItem.row, clickedRow);
+                     const endRow = Math.max(lastSelectedItem.row, clickedRow);
+                     const startCol = Math.min(lastSelectedItem.col, clickedCol);
+                     const endCol = Math.max(lastSelectedItem.col, clickedCol);
+
+                     // selectedFrameIds.clear(); // Don't clear, add to existing selection? Or replace? Let's replace for now.
+                     // Keep existing selection and add range:
+                     // selectedFrameIds = new Set(selectedFrameIds); // Ensure it's a new set if modifying
+
+                     // Standard behavior: Clear previous and select range
+                     selectedFrameIds.clear();
+
+                     placedImages.forEach(item => {
+                         if (item.row >= startRow && item.row <= endRow && item.col >= startCol && item.col <= endCol) {
+                             selectedFrameIds.add(item.id);
+                         }
+                     });
+                     console.log(`Shift+Click: Selected range [${startRow},${startCol}] to [${endRow},${endCol}]. Total: ${selectedFrameIds.size}`);
+                 } else if (clickedImage) {
+                     // Shift click but no previous anchor, or clicked empty cell - treat as normal click
+                     selectedFrameIds.clear();
+                     selectedFrameIds.add(clickedImageId);
+                     lastSelectedFrameId = clickedImageId;
+                 } else {
+                     // Shift click on empty cell with anchor - do nothing? Or select rect to empty cell? Let's do nothing.
+                     console.log("Shift+Click on empty cell with anchor - ignored.");
+                 }
+                 draggedImage = null; // Disable dragging during shift selection
+                 isDragging = false;
+
+             } else {
+                 // --- Normal Click Logic ---
+                 if (clickedImage) {
+                     // Clicked on an existing frame
+                     selectedFrameIds.clear(); // Clear previous selection
+                     selectedFrameIds.add(clickedImageId);
+                     lastSelectedFrameId = clickedImageId; // Set anchor for potential shift-click
+
+                     // Prepare for potential drag ONLY if one item is selected
+                     draggedImage = clickedImage;
+                     isDragging = false; // Reset dragging state
+                     dragOffsetX = pos.x - (draggedImage.col * frameWidth);
+                     dragOffsetY = pos.y - (draggedImage.row * frameHeight);
+                     canvas.style.cursor = 'grab';
+                     console.log(`Clicked frame ID: ${clickedImageId}`);
+
+                 } else {
+                     // Clicked on an empty cell
+                     selectedFrameIds.clear(); // Deselect all
+                     lastSelectedFrameId = null; // Clear anchor
+                     draggedImage = null;
+                     isDragging = false;
+                     canvas.style.cursor = 'default';
+                     console.log("Clicked empty cell.");
+                 }
+             }
+
+             redrawCanvas();
+             startAnimation(); // Update animation based on (last) selection
         }
+
         function handleMouseMove(event) {
-             if (!draggedImage) return; const currentX = event.clientX ?? event.touches?.[0]?.clientX; const currentY = event.clientY ?? event.touches?.[0]?.clientY; if (typeof currentX !== 'number' || typeof currentY !== 'number') return; const moveThreshold = 5;
-             if (!isDragging && (Math.abs(currentX - dragStartClientX) > moveThreshold || Math.abs(currentY - dragStartClientY) > moveThreshold)) { isDragging = true; dragMoved = true; canvas.style.cursor = 'grabbing'; console.log("Drag start ID:", draggedImage.id); redrawCanvas(); }
-             if (isDragging) { if (event.type === 'touchmove') event.preventDefault(); const pos = getMousePos(canvas, event); if (!pos) return; dragStartCanvasX = pos.x; dragStartCanvasY = pos.y; redrawCanvas(); }
+             // Only allow dragging if exactly one frame was initially clicked (draggedImage is set)
+             // and shift wasn't pressed. Dragging is disabled for multi-selection.
+             if (!draggedImage || selectedFrameIds.size !== 1) return;
+
+             const currentX = event.clientX ?? event.touches?.[0]?.clientX;
+             const currentY = event.clientY ?? event.touches?.[0]?.clientY;
+             if (typeof currentX !== 'number' || typeof currentY !== 'number') return;
+
+             const moveThreshold = 5; // Pixels threshold to start drag
+
+             // Check if dragging hasn't started yet and threshold is met
+             if (!isDragging && (Math.abs(currentX - dragStartClientX) > moveThreshold || Math.abs(currentY - dragStartClientY) > moveThreshold)) {
+                 isDragging = true;
+                 dragMoved = true; // Mark that the mouse actually moved significantly
+                 canvas.style.cursor = 'grabbing';
+                 console.log("Drag start ID:", draggedImage.id);
+                 redrawCanvas(); // Redraw to hide original position
+             }
+
+             // If dragging is active, update position and redraw
+             if (isDragging) {
+                 if (event.type === 'touchmove') event.preventDefault(); // Prevent scrolling on touch devices
+                 const pos = getMousePos(canvas, event);
+                 if (!pos) return;
+                 dragStartCanvasX = pos.x; // Update current drag position for drawing
+                 dragStartCanvasY = pos.y;
+                 redrawCanvas(); // Redraw to show image at new position
+             }
         }
+
         function handleMouseUp(event) {
-            const wasDragging = isDragging; const currentlyDragged = draggedImage;
-            if (isDragging) {
-                isDragging = false; canvas.style.cursor = 'default'; let requiresAnimationUpdate = false;
-                const pos = getMousePos(canvas, event);
-                if (pos && frameWidth > 0 && frameHeight > 0 && currentlyDragged) {
-                    const targetCol = Math.floor(pos.x / frameWidth); const targetRow = Math.floor(pos.y / frameHeight);
-                    if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) {
-                        const existingImage = placedImages.find(item => item.row === targetRow && item.col === targetCol && item.id !== currentlyDragged.id);
-                        if (!existingImage) { if (currentlyDragged.row !== targetRow) requiresAnimationUpdate = true; currentlyDragged.row = targetRow; currentlyDragged.col = targetCol; selectedFrameId = currentlyDragged.id; console.log(`Drop ID ${currentlyDragged.id} at [${targetRow}, ${targetCol}]`); }
-                        else { showMessage("Target occupied."); console.log(`Drop fail ID ${currentlyDragged.id}: target [${targetRow}, ${targetCol}] occupied`); selectedFrameId = currentlyDragged.id; }
-                    } else { showMessage("Dropped outside grid."); console.log(`Drop fail ID ${currentlyDragged.id}: outside grid`); selectedFrameId = currentlyDragged.id; }
-                } else { console.warn("Could not get drop location."); if(currentlyDragged) selectedFrameId = currentlyDragged.id; }
-                draggedImage = null; redrawCanvas(); if (requiresAnimationUpdate || selectedFrameId !== null) startAnimation();
-            } else if (currentlyDragged && !dragMoved) { console.log(`Click ID ${currentlyDragged.id}. Sel state: ${selectedFrameId}`); canvas.style.cursor = 'grab'; }
-            else if (!currentlyDragged) { canvas.style.cursor = 'default'; }
-            if (!isDragging) draggedImage = null; dragMoved = false;
+             const wasDragging = isDragging;
+             const currentlyDragged = draggedImage; // Store ref before clearing
+
+             if (isDragging && currentlyDragged) { // Ensure we were dragging a valid image
+                 isDragging = false;
+                 canvas.style.cursor = 'default'; // Reset cursor immediately
+                 let requiresAnimationUpdate = false;
+
+                 const pos = getMousePos(canvas, event);
+                 if (pos && frameWidth > 0 && frameHeight > 0) {
+                     const targetCol = Math.floor(pos.x / frameWidth);
+                     const targetRow = Math.floor(pos.y / frameHeight);
+
+                     // Check if drop target is valid and empty
+                     if (targetCol >= 0 && targetCol < gridCols && targetRow >= 0 && targetRow < gridRows) {
+                         const existingImage = placedImages.find(item => item.row === targetRow && item.col === targetCol && item.id !== currentlyDragged.id);
+
+                         if (!existingImage) {
+                             // Valid drop, update position
+                             if (currentlyDragged.row !== targetRow) requiresAnimationUpdate = true; // Row changed, update animation
+                             currentlyDragged.row = targetRow;
+                             currentlyDragged.col = targetCol;
+                             // Keep it selected (already selected in mousedown)
+                             // lastSelectedFrameId = currentlyDragged.id; // Keep anchor
+                             console.log(`Drop ID ${currentlyDragged.id} at [${targetRow}, ${targetCol}]`);
+                         } else {
+                             // Target occupied, snap back (redraw will handle this as position wasn't updated)
+                             showMessage("Target cell occupied.");
+                             console.log(`Drop fail ID ${currentlyDragged.id}: target [${targetRow}, ${targetCol}] occupied`);
+                         }
+                     } else {
+                         // Dropped outside grid, snap back
+                         showMessage("Dropped outside grid.");
+                         console.log(`Drop fail ID ${currentlyDragged.id}: outside grid`);
+                     }
+                 } else {
+                     console.warn("Could not get drop location or invalid frame size.");
+                 }
+                 draggedImage = null; // Clear dragged image reference
+                 redrawCanvas(); // Redraw to show final position or snap back
+                 if (requiresAnimationUpdate || selectedFrameIds.size > 0) {
+                     startAnimation(); // Update animation if row changed or still selected
+                 }
+
+             } else if (currentlyDragged && !dragMoved) {
+                 // This was a click, not a drag. Selection handled in mousedown.
+                 console.log(`Click finished on ID ${currentlyDragged.id}. Selection size: ${selectedFrameIds.size}`);
+                 canvas.style.cursor = 'grab'; // Keep grab cursor until mouse moves off
+             } else {
+                  // Clicked empty space or finished shift-click
+                  canvas.style.cursor = 'default';
+             }
+
+             // Reset drag state variables
+             if (!isDragging) draggedImage = null; // Ensure cleared if not dragging
+             dragMoved = false;
         }
+
         function handleMouseLeave(event) {
-             if (isDragging) { const previouslyDragged = draggedImage; isDragging = false; draggedImage = null; canvas.style.cursor = 'default'; redrawCanvas(); showMessage("Drag cancelled."); console.log(`Drag cancel ID ${previouslyDragged?.id}`); if(previouslyDragged) selectedFrameId = previouslyDragged.id; startAnimation(); }
-             else if (canvas.style.cursor === 'grab') { canvas.style.cursor = 'default'; }
+             // If dragging, cancel the drag and snap back
+             if (isDragging) {
+                 const previouslyDragged = draggedImage;
+                 isDragging = false;
+                 draggedImage = null;
+                 canvas.style.cursor = 'default';
+                 redrawCanvas(); // Redraw to snap back
+                 showMessage("Drag cancelled.");
+                 console.log(`Drag cancel ID ${previouslyDragged?.id}`);
+                 // Keep selection state as it was before drag started
+                 startAnimation(); // Update animation based on selection
+             }
+             // Reset grab cursor if leaving after a simple click
+             else if (canvas.style.cursor === 'grab') {
+                 canvas.style.cursor = 'default';
+             }
         }
 
         // --- Animation Functions ---
@@ -1278,9 +1484,24 @@
         }
         function startAnimation() {
             stopAnimation();
-            const selectedItem = selectedFrameId !== null ? placedImages.find(item => item.id === selectedFrameId) : null;
-            if (selectedItem) { framesToAnimate = placedImages.filter(item => item.row === selectedItem.row).sort((a, b) => a.col - b.col); }
-            else { framesToAnimate = [...placedImages].sort((a, b) => a.row - b.row || a.col - b.col); }
+
+            // Animate the row of the last selected frame, or all frames if none selected
+            let animationRow = -1;
+            if (lastSelectedFrameId !== null) {
+                const lastSelectedItem = placedImages.find(item => item.id === lastSelectedFrameId);
+                if (lastSelectedItem) {
+                    animationRow = lastSelectedItem.row;
+                }
+            }
+
+            if (animationRow !== -1) {
+                framesToAnimate = placedImages.filter(item => item.row === animationRow).sort((a, b) => a.col - b.col);
+            } else {
+                // If no specific frame is 'last selected', animate all frames
+                framesToAnimate = [...placedImages].sort((a, b) => a.row - b.row || a.col - b.col);
+            }
+
+
             currentAnimationFrameIndex = 0;
             if (framesToAnimate.length > 0 && animationFps > 0) { const intervalDelay = 1000 / animationFps; animationIntervalId = setInterval(runAnimationLoop, intervalDelay); }
             else { animationPreviewCtx.clearRect(0, 0, animationPreviewCanvas.width, animationPreviewCanvas.height); }
@@ -1304,19 +1525,42 @@
             console.log(`Downsampling with ratio N = ${ratioN}`);
             const downsampledImages = []; let maxColsNeeded = 0; let maxRow = -1;
             placedImages.forEach(img => { if (img.row > maxRow) maxRow = img.row; });
+
+            const idsToKeep = new Set(); // Keep track of IDs that survive downsampling
+
             for (let r = 0; r <= maxRow; r++) {
                 const rowFrames = placedImages.filter(item => item.row === r).sort((a, b) => a.col - b.col);
                 if (rowFrames.length === 0) continue;
                 let newColIndex = 0;
                 for (let i = 0; i < rowFrames.length; i++) {
-                    if (i % ratioN === 0) { const frameToKeep = rowFrames[i]; frameToKeep.col = newColIndex; downsampledImages.push(frameToKeep); newColIndex++; }
+                    if (i % ratioN === 0) {
+                        const frameToKeep = rowFrames[i];
+                        frameToKeep.col = newColIndex; // Update column index
+                        downsampledImages.push(frameToKeep);
+                        idsToKeep.add(frameToKeep.id); // Add its ID to the keep set
+                        newColIndex++;
+                    }
                 }
                 maxColsNeeded = Math.max(maxColsNeeded, newColIndex);
             }
             const originalCount = placedImages.length; placedImages = downsampledImages; const newCount = placedImages.length;
             const newGridCols = newCount > 0 ? Math.max(1, maxColsNeeded) : parseInt(gridColsInput.value);
             if (newGridCols !== gridCols) { gridCols = newGridCols; gridColsInput.value = gridCols; console.log(`Grid columns updated to ${gridCols}`); }
-            if (selectedFrameId !== null && !placedImages.some(item => item.id === selectedFrameId)) { selectedFrameId = null; }
+
+            // Update selection: remove IDs that were deleted
+            const currentSelected = new Set(selectedFrameIds);
+            selectedFrameIds.clear();
+            currentSelected.forEach(id => {
+                if (idsToKeep.has(id)) {
+                    selectedFrameIds.add(id);
+                }
+            });
+            // Reset last selected if it was deleted
+            if (lastSelectedFrameId !== null && !idsToKeep.has(lastSelectedFrameId)) {
+                lastSelectedFrameId = null;
+            }
+
+
             redrawCanvas(); startAnimation(); hideDownsampleModal();
             showMessage(`Downsampling complete. Kept ${newCount}/${originalCount} frames. Grid cols set to ${gridCols}.`, 5000);
         }
