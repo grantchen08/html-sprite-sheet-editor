@@ -213,6 +213,7 @@
       .lucide-file-image::before { content: "\edc8"; } /* file-image icon */
       .lucide-trash-2::before { content: "\ef0b"; } /* trash-2 icon */
       .lucide-filter::before { content: "\edc1"; } /* filter icon */
+      .lucide-flip-horizontal::before { content: "\edc3"; } /* flip-horizontal icon */
 
     </style>
 </head>
@@ -238,7 +239,7 @@
                 <label for="frame-height">Frame Height (px):</label>
                 <input type="number" id="frame-height" class="gui-input" value="64" min="1">
             </div>
-            <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+            <div class="col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
                  <button id="import-frames-button" class="gui-button">
                    <span class="lucide lucide-upload"></span>Import Frames
                  </button>
@@ -248,9 +249,14 @@
                  <button id="downsample-button" class="gui-button">
                    <span class="lucide lucide-filter"></span>Downsample
                  </button>
+                 <button id="flip-horizontal-button" class="gui-button" disabled>
+                   <span class="lucide lucide-flip-horizontal"></span>Flip H
+                 </button>
                  <button id="delete-frame-button" class="gui-button" disabled>
-                   <span class="lucide lucide-trash-2"></span>Delete Frame(s) </button>
-                <button id="save-button" class="gui-button"> <span class="lucide lucide-save"></span>Save Sprite Sheet
+                   <span class="lucide lucide-trash-2"></span>Delete Frame(s)
+                 </button>
+                <button id="save-button" class="gui-button">
+                    <span class="lucide lucide-save"></span>Save Sprite Sheet
                 </button>
             </div>
         </div>
@@ -264,7 +270,7 @@
                  <p class="text-sm font-medium text-gray-700 mb-2 text-center">Sprite Sheet Canvas</p>
                  <div id="canvas-container" class="relative w-full overflow-auto border border-gray-300 rounded-md bg-gray-50">
                     <canvas id="sprite-canvas"></canvas>
-                    </div>
+                 </div>
             </div>
 
             <div id="animation-preview-container" class="md:w-1/4 border border-gray-200 rounded-md p-3 bg-gray-50 flex flex-col items-center">
@@ -395,6 +401,7 @@
         const importSheetButton = document.getElementById('import-sheet-button');
         const saveButton = document.getElementById('save-button');
         const deleteFrameButton = document.getElementById('delete-frame-button');
+        const flipHorizontalButton = document.getElementById('flip-horizontal-button'); // New button
         const frameFileInput = document.getElementById('frame-file-input');
         const sheetFileInput = document.getElementById('sheet-file-input');
         const messageBox = document.getElementById('message-box');
@@ -532,8 +539,11 @@
              ctx.strokeStyle = '#e5e7eb'; // Reset to grid color
         }
 
-        function updateDeleteButtonState() {
-            deleteFrameButton.disabled = selectedFrameIds.size === 0;
+        // Renamed function to handle multiple buttons
+        function updateSelectionActionButtonsState() {
+            const hasSelection = selectedFrameIds.size > 0;
+            deleteFrameButton.disabled = !hasSelection;
+            flipHorizontalButton.disabled = !hasSelection; // Enable/disable flip button
         }
 
 
@@ -611,7 +621,7 @@
                 drawGrid();
                 drawImages();
                 drawSelectionHighlights(); // Draw highlights after images
-                updateDeleteButtonState(); // Update button based on selection
+                updateSelectionActionButtonsState(); // Update button based on selection
 
             } catch (e) { console.error("Error in redrawCanvas:", e); showMessage("Error updating canvas.", 5000); }
         }
@@ -1263,6 +1273,108 @@
              showMessage(`${deletedCount} frame(s) deleted.`);
         }
 
+        // --- Flip Handler --- NEW FUNCTION ---
+        function handleFlipHorizontal() {
+            if (selectedFrameIds.size === 0) {
+                showMessage("No frames selected to flip.");
+                return;
+            }
+            if (frameWidth <= 0 || frameHeight <= 0) {
+                 showMessage("Cannot flip: Invalid frame dimensions.");
+                 return;
+            }
+
+            console.log(`Flipping ${selectedFrameIds.size} selected frames horizontally.`);
+            showMessage(`Flipping ${selectedFrameIds.size} frame(s)...`, 5000);
+
+            const flipPromises = [];
+
+            selectedFrameIds.forEach(id => {
+                const itemIndex = placedImages.findIndex(item => item.id === id);
+                if (itemIndex === -1) {
+                    console.warn(`Frame ID ${id} not found in placedImages during flip.`);
+                    return; // Skip if not found
+                }
+                const item = placedImages[itemIndex];
+
+                if (!item.img || !item.img.complete || !item.img.naturalWidth || !item.img.naturalHeight) {
+                    console.warn(`Skipping flip for frame ID ${item.id}: Image not loaded or invalid.`);
+                    return; // Skip if image not ready
+                }
+
+                const promise = new Promise((resolve, reject) => {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = frameWidth;
+                    tempCanvas.height = frameHeight;
+                    const tempCtx = tempCanvas.getContext('2d');
+
+                    try {
+                        // Flip the context
+                        tempCtx.translate(frameWidth, 0);
+                        tempCtx.scale(-1, 1);
+
+                        // Draw the image onto the flipped context
+                        // Ensure drawing the *original* image data, not potentially already flipped data
+                        tempCtx.drawImage(item.img, 0, 0, frameWidth, frameHeight);
+
+                        // Create a new Image object from the flipped canvas
+                        const flippedImg = new Image();
+                        flippedImg.onload = () => {
+                            // Resolve with the original index and the new flipped image
+                            resolve({ index: itemIndex, newImg: flippedImg });
+                        };
+                        flippedImg.onerror = (err) => {
+                            console.error(`Error loading flipped image data for frame ID ${item.id}:`, err);
+                            reject(new Error(`Failed to load flipped image for frame ID ${item.id}`));
+                        };
+                        flippedImg.src = tempCanvas.toDataURL('image/png');
+
+                    } catch (e) {
+                        console.error(`Error flipping frame ID ${item.id}:`, e);
+                        reject(new Error(`Failed to flip frame ID ${item.id}`));
+                    }
+                });
+                flipPromises.push(promise);
+            });
+
+            // Wait for all flip operations to complete
+            Promise.allSettled(flipPromises)
+                .then(results => {
+                    let successCount = 0;
+                    let failCount = 0;
+
+                    results.forEach(result => {
+                        if (result.status === 'fulfilled') {
+                            const { index, newImg } = result.value;
+                            // Update the image in the original array using the index
+                            if (placedImages[index]) {
+                                placedImages[index].img = newImg;
+                                successCount++;
+                            } else {
+                                // This shouldn't happen if index was valid initially, but good to check
+                                console.error(`Original item at index ${index} missing after flip promise resolved.`);
+                                failCount++;
+                            }
+                        } else {
+                            console.error("Frame flip failed:", result.reason);
+                            failCount++;
+                        }
+                    });
+
+                    if (failCount > 0) {
+                        showMessage(`Flipped ${successCount} frame(s). Failed to flip ${failCount}.`, 5000);
+                    } else if (successCount > 0) {
+                        showMessage(`Flipped ${successCount} frame(s) horizontally.`, 3000);
+                    } else {
+                        showMessage("No frames were flipped (check console for errors).", 4000);
+                    }
+
+                    redrawCanvas(); // Redraw with flipped images
+                    startAnimation(); // Restart animation
+                });
+        }
+
+
         // --- Drag and Drop & Selection Logic ---
         function getMousePos(canvasEl, evt) { const rect = canvasEl.getBoundingClientRect(); const clientX = evt.clientX ?? evt.touches?.[0]?.clientX; const clientY = evt.clientY ?? evt.touches?.[0]?.clientY; if (typeof clientX !== 'number' || typeof clientY !== 'number') { console.warn("No mouse pos."); return null; } return { x: clientX - rect.left, y: clientY - rect.top }; }
 
@@ -1579,6 +1691,7 @@
         sheetFileInput.addEventListener('change', handleSheetFileSelect);
         saveButton.addEventListener('click', handleSaveClick); // Opens save modal
         deleteFrameButton.addEventListener('click', handleDeleteSelected);
+        flipHorizontalButton.addEventListener('click', handleFlipHorizontal); // Listener for new button
 
         // Modal Listeners (Import Sheet - listeners for inputs added dynamically)
         cancelImportSheetButton.addEventListener('click', handleCancelImportSheet);
